@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<!-- Boxicons -->
+	<link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+	<link href='https://unpkg.com/boxicons@2.1.4/dist/boxicons.js' rel='stylesheet'>
+
+	<!-- Stylesheet -->
+	<link rel="stylesheet" href="style.css">
+
+	<title>Quorum - Gestão de Contratos Públicos de Saúde</title>
+</head>
+<body>
+	<!-- SIDEBAR: Menu principal de navegação -->
+	<section id="sidebar">
+		<a href="#" class="brand">
+			<i class='bx bxs-smile bx-lg'></i>
+			<span class="text">Quorum</span>
+		</a>
+		<!-- Menu superior da sidebar -->
+		<ul class="side-menu top">
+			<li class="active">
+				<a href="#" data-page="dashboard">
+					<i class='bx bxs-dashboard bx-sm' ></i>
+					<span class="text">Dashboard</span>
+				</a>
+			</li>
+			<li>
+				<a href="#" data-page="contratos">
+					<i class='bx bxs-file-doc bx-sm' ></i>
+					<span class="text">Contratos</span>
+				</a>
+			</li>
+			<li>
+				<a href="#" data-page="editais">
+					<i class='bx bxs-book-open bx-sm' ></i>
+					<span class="text">Editais</span>
+				</a>
+			</li>
+			<li>
+				<a href="#" data-page="medicos">
+					<i class='bx bxs-user-circle bx-sm' ></i>
+					<span class="text">Médicos</span>
+				</a>
+			</li>
+			<li>
+				<a href="#" data-page="plantoes">
+					<i class='bx bxs-calendar bx-sm' ></i>
+					<span class="text">Plantões</span>
+				</a>
+			</li>
+			<li>
+				<a href="#" data-page="atendimentos">
+					<i class='bx bxs-heart-circle bx-sm' ></i>
+					<span class="text">Atendimentos</span>
+				</a>
+			</li>
+			<li>
+				<a href="#" data-page="relatorios">
+					<i class='bx bxs-bar-chart-alt-2 bx-sm' ></i>
+					<span class="text">Relatórios</span>
+				</a>
+			</li>
+		</ul>
+		<!-- Menu inferior da sidebar: Configurações e Logout -->
+		<ul class="side-menu bottom">
+			<li>
+				<a href="#">
+					<i class='bx bxs-cog bx-sm bx-spin-hover' ></i>
+					<span class="text">Configurações</span>
+				</a>
+			</li>
+			<li>
+				<a href="#" class="logout">
+					<i class='bx bx-power-off bx-sm bx-burst-hover' ></i>
+					<span class="text">Sair</span>
+				</a>
+			</li>
+		</ul>
+	</section>
+	<!-- /SIDEBAR -->
+
+	<!-- CONTENT: Área principal de conteúdo -->
+	<section id="content">
+		<!-- NAVBAR: Barra superior com busca, notificações e perfil -->
+		<nav>
+			<i class='bx bx-menu bx-sm' ></i>
+			<a href="#" class="nav-link">Gestão Contratual</a>
+			<form action="#">
+				<div class="form-input">
+					<input type="search" placeholder="Pesquisar contratos...">
+					<button type="submit" class="search-btn"><i class='bx bx-search' ></i></button>
+				</div>
+			</form>
+			<!-- Dark Mode Toggle -->
+			<input type="checkbox" class="checkbox" id="switch-mode" hidden />
+			<label class="swith-lm" for="switch-mode">
+				<i class="bx bxs-moon"></i>
+				<i class="bx bx-sun"></i>
+				<div class="ball"></div>
+			</label>
+
+			<!-- Notification Bell com dropdown -->
+			<a href="#" class="notification" id="notificationIcon">
+				<i class='bx bxs-bell bx-tada-hover' ></i>
+				<span class="num">3</span>
+			</a>
+			<div class="notification-menu" id="notificationMenu">
+				<ul>
+					<li>Contrato #001 vencido - ação requerida</li>
+					<li>Médico não confirmou plantão amanhã</li>
+					<li>Novo edital publicado em SP</li>
+				</ul>
+			</div>
+
+			<!-- Profile Menu com dropdown -->
+			<a href="#" class="profile" id="profileIcon">
+				<img src="https://placehold.co/36x36/3C91E6/FFFFFF?text=U" alt="Perfil">
+			</a>
+			<div class="profile-menu" id="profileMenu">
+				<ul>
+					<li><a href="#">Meu Perfil</a></li>
+					<li><a href="#">Configurações</a></li>
+					<li><a href="#">Sair</a></li>
+				</ul>
+			</div>
+		</nav>
+		<!-- /NAVBAR -->
+
+		<!-- MAIN: Conteúdo principal do dashboard -->
+		<main>
+			<section class="page active" data-page="dashboard">
+				<!-- Cabeçalho com título e breadcrumb -->
+				<div class="head-title">
+					<div class="left">
+						<h1>Dashboard</h1>
+						<ul class="breadcrumb">
+							<li>
+								<a href="#">Dashboard</a>
+							</li>
+							<li><i class='bx bx-chevron-right' ></i></li>
+							<li>
+								<a class="active" href="#">Início</a>
+							</li>
+						</ul>
+					</div>
+					<a href="#" class="btn-download">
+						<i class='bx bxs-cloud-download bx-fade-down-hover' ></i>
+						<span class="text">Exportar Relatório</span>
+					</a>
+				</div>
+
+				<!-- Cards de Statisticas: KPIs do sistema -->
+				<ul class="box-info">
+					<li>
+						<i class='bx bxs-file-invoice' ></i>
+						<span class="text">
+							<h3>24</h3>
+							<p>Contratos Ativos</p>
+						</span>
+					</li>
+					<li>
+						<i class='bx bxs-user-detail' ></i>
+						<span class="text">
+							<h3>156</h3>
+							<p>Médicos Alocados</p>
+						</span>
+					</li>
+					<li>
+						<i class='bx bxs-calendar-check' ></i>
+						<span class="text">
+							<h3>87</h3>
+							<p>Plantões no Período</p>
+						</span>
+					</li>
+				</ul>
+
+				<!-- Seção de Tabelas e Pendências -->
+				<div class="table-data">
+					<!-- Tabela Principal: Execuções Contratuais -->
+					<div class="order">
+						<div class="head">
+							<h3>Execuções de Contratos</h3>
+							<i class='bx bx-search' ></i>
+							<i class='bx bx-filter' ></i>
+						</div>
+						<table>
+							<thead>
+								<tr>
+									<th>Contrato</th>
+									<th>Orgao</th>
+									<th>Municipio/UF</th>
+									<th>Período</th>
+									<th>Status</th>
+								</tr>
+							</thead>
+							<tbody id="contratosTableBody">
+								<tr>
+									<td colspan="5">Carregando contratos...</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+
+					<!-- Bloco de Pendências e Alertas -->
+					<div class="todo">
+						<div class="head">
+							<h3>Pendências</h3>
+							<i class='bx bx-plus icon'></i>
+							<i class='bx bx-filter' ></i>
+						</div>
+						<ul class="todo-list">
+							<!-- Item concluído -->
+							<li class="completed">
+								<p>Validar documentação contrato #001</p>
+								<i class='bx bx-dots-vertical-rounded' ></i>
+							</li>
+							<!-- Item concluído -->
+							<li class="completed">
+								<p>Confirmar disponibilidade Dr. Silva</p>
+								<i class='bx bx-dots-vertical-rounded' ></i>
+							</li>
+							<!-- Item não concluído - alerta -->
+							<li class="not-completed">
+								<p>Revisar relatório Dra. Maria - prazo 2 dias</p>
+								<i class='bx bx-dots-vertical-rounded' ></i>
+							</li>
+							<!-- Item concluído -->
+							<li class="completed">
+								<p>Atualizar dados de horas trabalhadas</p>
+								<i class='bx bx-dots-vertical-rounded' ></i>
+							</li>
+							<!-- Item não concluído - crítico -->
+							<li class="not-completed">
+								<p>Resolver conformidade contrato #004</p>
+								<i class='bx bx-dots-vertical-rounded' ></i>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</section>
+
+			<section class="page" data-page="editais">
+				<div class="head-title">
+					<div class="left">
+						<h1>Editais</h1>
+						<ul class="breadcrumb">
+							<li>
+								<a href="#">Editais</a>
+							</li>
+							<li><i class='bx bx-chevron-right' ></i></li>
+							<li>
+								<a class="active" href="#">Leitura de requisitos</a>
+							</li>
+						</ul>
+					</div>
+					<a href="#" class="btn-download" data-page="editais-novo" id="abrirCadastroEdital">
+						<i class='bx bxs-file-plus bx-fade-down-hover' ></i>
+						<span class="text">Novo Edital</span>
+					</a>
+				</div>
+
+				<div class="edital-grid">
+					<div class="edital-card">
+						<div class="card-head">
+							<h3>Leitura de PDF</h3>
+							<p>Envie o edital para mapear automaticamente os requisitos.</p>
+						</div>
+						<div class="edital-actions">
+							<a href="#" class="btn-primary" data-page="editais-novo">Analisar PDF</a>
+						</div>
+					</div>
+
+					<div class="edital-card">
+						<div class="card-head">
+							<h3>Novos editais publicados</h3>
+							<p>Alertas recentes para monitoramento rapido.</p>
+						</div>
+						<ul class="edital-feed">
+							<li>
+								<div>
+									<strong>Prefeitura de Sao Paulo</strong>
+									<span>Credenciamento de especialistas</span>
+								</div>
+								<span class="tag">SP</span>
+							</li>
+							<li>
+								<div>
+									<strong>Estado de Minas Gerais</strong>
+									<span>Plantao hospitalar regional</span>
+								</div>
+								<span class="tag">MG</span>
+							</li>
+							<li>
+								<div>
+									<strong>Secretaria de Saude RS</strong>
+									<span>Credenciamento UTI adulto</span>
+								</div>
+								<span class="tag">RS</span>
+							</li>
+						</ul>
+					</div>
+				</div>
+
+			</section>
+
+			<section class="page" data-page="editais-novo">
+				<div class="head-title">
+					<div class="left">
+						<h1>Novo edital</h1>
+						<ul class="breadcrumb">
+							<li>
+								<a href="#" data-page="editais">Editais</a>
+							</li>
+							<li><i class='bx bx-chevron-right' ></i></li>
+							<li>
+								<a class="active" href="#">Novo edital</a>
+							</li>
+						</ul>
+					</div>
+					<a href="#" class="btn-download" data-page="editais" id="voltarEdital">
+						<i class='bx bx-left-arrow-alt' ></i>
+						<span class="text">Voltar</span>
+					</a>
+				</div>
+
+				<p>Envie o PDF para extrair automaticamente requisitos e checklist.</p>
+				<div class="edital-grid">
+					<div class="edital-card upload-card">
+						<div class="card-head">
+							<h3>Upload do edital (PDF)</h3>
+							<p>Envie o PDF para extrair automaticamente os requisitos.</p>
+						</div>
+						<label class="upload-area" for="editalPdfInput">
+							<i class='bx bxs-cloud-upload'></i>
+							<span>Arraste o arquivo aqui ou clique para selecionar</span>
+							<small id="editalPdfName">Nenhum arquivo selecionado</small>
+						</label>
+						<input type="file" id="editalPdfInput" accept="application/pdf" hidden>
+						<button class="btn-primary" id="analisarEditalBtn">Identificar requisitos</button>
+					</div>
+
+					<div class="edital-card">
+						<div class="card-head">
+							<h3>Resumo do edital</h3>
+							<p>Principais requisitos identificados automaticamente.</p>
+						</div>
+						<ul class="requirements-list" id="editalRequirements">
+							<li class="placeholder">Nenhum requisito identificado.</li>
+						</ul>
+					</div>
+				</div>
+
+				<div class="edital-card table-card">
+					<div class="head">
+						<h3>Checklist de requisitos</h3>
+						<i class='bx bx-filter'></i>
+					</div>
+					<table class="requirements-table">
+						<thead>
+							<tr>
+								<th>Requisito</th>
+								<th>Criticidade</th>
+								<th>Status</th>
+							</tr>
+						</thead>
+						<tbody id="editalChecklist">
+							<tr>
+								<td colspan="3">Carregue um PDF para gerar o checklist.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+
+			<section class="page" data-page="contratos">
+				<div class="head-title">
+					<div class="left">
+						<h1>Contratos</h1>
+						<ul class="breadcrumb">
+							<li><a href="#">Contratos</a></li>
+							<li><i class='bx bx-chevron-right' ></i></li>
+							<li><a class="active" href="#">Visao geral</a></li>
+						</ul>
+					</div>
+				</div>
+				<div class="empty-state">
+					<i class='bx bxs-file-doc'></i>
+					<p>Em breve, a tela de contratos detalhada.</p>
+				</div>
+			</section>
+
+			<section class="page" data-page="medicos">
+				<div class="head-title">
+					<div class="left">
+						<h1>Médicos</h1>
+						<ul class="breadcrumb">
+							<li><a href="#">Médicos</a></li>
+							<li><i class='bx bx-chevron-right' ></i></li>
+							<li><a class="active" href="#">Painel</a></li>
+						</ul>
+					</div>
+				</div>
+				<div class="medicos-card">
+					<div class="head">
+						<h3>Medicos cadastrados</h3>
+						<div class="medicos-actions">
+							<button class="btn-primary" id="abrirCadastroMedico">Cadastrar medico</button>
+						</div>
+					</div>
+					<div class="medicos-filters">
+						<div>
+							<label for="medicosFilterEspecialidade">Especialidade</label>
+							<select id="medicosFilterEspecialidade">
+								<option value="">Todas</option>
+							</select>
+						</div>
+						<div>
+							<label for="medicosFilterStatus">Status</label>
+							<select id="medicosFilterStatus">
+								<option value="">Todos</option>
+								<option value="ativo">Ativo</option>
+								<option value="inativo">Inativo</option>
+							</select>
+						</div>
+					</div>
+					<table class="medicos-table">
+						<thead>
+							<tr>
+								<th>Nome</th>
+								<th>Especialidade</th>
+								<th>CRM</th>
+								<th>Cidade/UF</th>
+								<th>Status</th>
+								<th>Acoes</th>
+							</tr>
+						</thead>
+						<tbody id="medicosTableBody">
+							<tr>
+								<td colspan="6">Carregando medicos...</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<div class="modal" id="medicoModal" aria-hidden="true">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h3>Cadastro de médicos</h3>
+							<button class="modal-close" type="button" id="fecharCadastroMedico">&times;</button>
+						</div>
+						<p>Registre profissionais e organize as informações basicas.</p>
+						<form id="medicoForm" class="medico-form">
+							<div class="form-row">
+								<div class="form-group">
+									<label>Nome completo</label>
+									<input type="text" id="medicoNome" placeholder="Ex: Ana Paula Souza" required>
+								</div>
+								<div class="form-group">
+									<label>Especialidade</label>
+									<input type="text" id="medicoEspecialidade" placeholder="Ex: Cardiologia" required>
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-group">
+									<label>CRM</label>
+									<input type="text" id="medicoCrm" placeholder="Ex: CRM 12345/SP">
+								</div>
+								<div class="form-group">
+									<label>Telefone</label>
+									<input type="text" id="medicoTelefone" placeholder="Ex: (11) 98888-0000">
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-group">
+									<label>Email</label>
+									<input type="email" id="medicoEmail" placeholder="Ex: ana@hospital.com">
+								</div>
+								<div class="form-group">
+									<label>UF / Cidade</label>
+									<div class="input-inline">
+										<input type="text" id="medicoUf" placeholder="UF" maxlength="2">
+										<input type="text" id="medicoCidade" placeholder="Cidade">
+									</div>
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-group">
+									<label>Status</label>
+									<select id="medicoStatus">
+										<option value="ativo" selected>Ativo</option>
+										<option value="inativo">Inativo</option>
+									</select>
+								</div>
+							</div>
+							<button type="submit" class="btn-primary">Salvar medico</button>
+						</form>
+					</div>
+				</div>
+			</section>
+
+			<section class="page" data-page="plantoes">
+				<div class="head-title">
+					<div class="left">
+						<h1>Plantões</h1>
+						<ul class="breadcrumb">
+							<li><a href="#">Plantões</a></li>
+							<li><i class='bx bx-chevron-right' ></i></li>
+							<li><a class="active" href="#">Agenda</a></li>
+						</ul>
+					</div>
+					<a href="#" class="btn-download abrir-cadastro-plantao">
+						<i class='bx bxs-calendar-plus bx-fade-down-hover' ></i>
+						<span class="text">Novo plantao</span>
+					</a>
+				</div>
+
+				<div class="plantoes-grid">
+					<div class="plantoes-card">
+						<div class="head">
+							<h3>Agenda de plantões</h3>
+							<div class="plantoes-actions">
+								<button class="btn-primary abrir-cadastro-plantao" type="button">Cadastrar plantao</button>
+							</div>
+						</div>
+
+						<div class="plantoes-filters">
+							<div>
+								<label for="plantoesFilterStatus">Status</label>
+								<select id="plantoesFilterStatus">
+									<option value="">Todos</option>
+									<option value="agendado">Agendado</option>
+									<option value="hoje">Hoje</option>
+									<option value="concluido">Concluido</option>
+								</select>
+							</div>
+							<div>
+								<label for="plantoesFilterEspecialidade">Especialidade</label>
+								<select id="plantoesFilterEspecialidade">
+									<option value="">Todas</option>
+								</select>
+							</div>
+							<div>
+								<label for="plantoesFilterPeriodo">Periodo</label>
+								<input id="plantoesFilterPeriodo" type="text" placeholder="Ex: 10/03 - 20/03">
+							</div>
+						</div>
+
+						<table class="plantoes-table">
+							<thead>
+								<tr>
+									<th>Data</th>
+									<th>Medico</th>
+									<th>Especialidade</th>
+									<th>Local</th>
+									<th>Status</th>
+									<th>Acoes</th>
+								</tr>
+							</thead>
+							<tbody id="plantoesTableBody">
+								<tr>
+									<td colspan="6">Carregando plantões...</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+
+					<div class="plantoes-card">
+						<div class="head">
+							<h3>Resumo do periodo</h3>
+							<i class='bx bx-filter'></i>
+						</div>
+						<ul class="plantoes-summary">
+							<li>
+								<strong id="plantoesResumoConcluidos">0</strong>
+								<span>Plantões concluidos</span>
+							</li>
+							<li>
+								<strong id="plantoesResumoHoje">0</strong>
+								<span>Plantões hoje</span>
+							</li>
+							<li>
+								<strong id="plantoesResumoAgendados">0</strong>
+								<span>Plantões agendados</span>
+							</li>
+						</ul>
+					</div>
+				</div>
+
+				<div class="modal" id="plantaoModal" aria-hidden="true">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h3>Cadastro de plantão</h3>
+							<button class="modal-close" type="button" id="fecharCadastroPlantao">&times;</button>
+						</div>
+						<p>Registre plantões, médicos envolvidos e carga horaria.</p>
+						<form id="plantaoForm" class="plantao-form">
+							<div class="form-row">
+								<div class="form-group">
+									<label>Medico</label>
+									<select id="plantaoMedico" required>
+										<option value="">Selecione</option>
+									</select>
+								</div>
+								<div class="form-group">
+									<label>Data</label>
+									<input type="date" id="plantaoData" required>
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-group">
+									<label>Carga horaria (h)</label>
+									<input type="number" id="plantaoCargaHoraria" min="1" max="24" placeholder="Ex: 12" required>
+								</div>
+							</div>
+							<button type="submit" class="btn-primary">Salvar plantao</button>
+						</form>
+					</div>
+				</div>
+			</section>
+
+			<section class="page" data-page="atendimentos">
+				<div class="head-title">
+					<div class="left">
+						<h1>Atendimentos</h1>
+						<ul class="breadcrumb">
+							<li><a href="#">Atendimentos</a></li>
+							<li><i class='bx bx-chevron-right' ></i></li>
+							<li><a class="active" href="#">Indicadores</a></li>
+						</ul>
+					</div>
+				</div>
+				<div class="empty-state">
+					<i class='bx bxs-heart-circle'></i>
+					<p>Em breve, a tela de atendimentos detalhada.</p>
+				</div>
+			</section>
+
+			<section class="page" data-page="relatorios">
+				<div class="head-title">
+					<div class="left">
+						<h1>Prestação de contas</h1>
+						<ul class="breadcrumb">
+							<li><a href="#">Relatórios</a></li>
+							<li><i class='bx bx-chevron-right' ></i></li>
+							<li><a class="active" href="#">Evidenciacao</a></li>
+						</ul>
+					</div>
+					<a href="#" class="btn-download">
+						<i class='bx bxs-cloud-download bx-fade-down-hover' ></i>
+						<span class="text">Gerar dossie</span>
+					</a>
+				</div>
+
+				<div class="relatorios-grid">
+					<div class="relatorios-card">
+						<div class="card-head">
+							<h3>Resumo do contrato</h3>
+							<p>Visao consolidada para prestação de contas.</p>
+						</div>
+						<ul class="relatorios-summary">
+							<li>
+								<span>Contrato</span>
+								<strong>#2026-014</strong>
+							</li>
+							<li>
+								<span>Orgao</span>
+								<strong>Secretaria Municipal de Saude</strong>
+							</li>
+							<li>
+								<span>Periodo</span>
+								<strong>01/01/2026 - 31/12/2026</strong>
+							</li>
+							<li>
+								<span>Valor contratado</span>
+								<strong>R$ 4.800.000,00</strong>
+							</li>
+							<li>
+								<span>Status</span>
+								<strong class="relatorios-tag">Em execucao</strong>
+							</li>
+						</ul>
+					</div>
+
+					<div class="relatorios-card">
+						<div class="card-head">
+							<h3>Processo de prestação de contas</h3>
+							<p>Etapas detalhadas do fluxo de evidenciacao.</p>
+						</div>
+						<ol class="process-steps">
+							<li>
+								<strong>1. Consolidacao de producao</strong>
+								<span>Horas cumpridas, plantões realizados e escalas.</span>
+							</li>
+							<li>
+								<strong>2. Evidencias documentais</strong>
+								<span>Contratos, termos aditivos, comprovantes e checklists.</span>
+							</li>
+							<li>
+								<strong>3. Validacao operacional</strong>
+								<span>Conferencia da equipe tecnica e gestores responsaveis.</span>
+							</li>
+							<li>
+								<strong>4. Relatorio financeiro</strong>
+								<span>Notas fiscais, empenhos e conciliacao de pagamentos.</span>
+							</li>
+							<li>
+								<strong>5. Dossie final</strong>
+								<span>Pacote completo para auditoria e publicacao.</span>
+							</li>
+						</ol>
+					</div>
+				</div>
+
+				<div class="relatorios-grid">
+					<div class="relatorios-card">
+						<div class="head">
+							<h3>Evidencias do contrato</h3>
+							<div class="relatorios-actions">
+								<button class="btn-primary" type="button">Adicionar evidencia</button>
+							</div>
+						</div>
+						<table class="relatorios-table">
+							<thead>
+								<tr>
+									<th>Documento</th>
+									<th>Tipo</th>
+									<th>Data</th>
+									<th>Responsavel</th>
+									<th>Status</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td>Mapa de plantões janeiro</td>
+									<td>Operacional</td>
+									<td>05/02/2026</td>
+									<td>Equipe de escalas</td>
+									<td><span class="status completed">Validado</span></td>
+								</tr>
+								<tr>
+									<td>Relatorio de producao</td>
+									<td>Indicadores</td>
+									<td>06/02/2026</td>
+									<td>Coordenacao tecnica</td>
+									<td><span class="status process">Em revisao</span></td>
+								</tr>
+								<tr>
+									<td>Nota fiscal 2026-011</td>
+									<td>Financeiro</td>
+									<td>08/02/2026</td>
+									<td>Financeiro</td>
+									<td><span class="status pending">Pendente</span></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+
+					<div class="relatorios-card">
+						<div class="head">
+							<h3>Conformidade e evidencias</h3>
+							<i class='bx bx-check-shield'></i>
+						</div>
+						<ul class="relatorios-checklist">
+							<li>
+								<span>Comprovantes de jornada anexados</span>
+								<span class="status completed">Ok</span>
+							</li>
+							<li>
+								<span>Registro de presenca validado</span>
+								<span class="status completed">Ok</span>
+							</li>
+							<li>
+								<span>Notas fiscais conciliadas</span>
+								<span class="status pending">Pendente</span>
+							</li>
+							<li>
+								<span>Relatorio de indicadores entregue</span>
+								<span class="status process">Em revisao</span>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</section>
+		</main>
+		<!-- /MAIN -->
+	</section>
+	<!-- /CONTENT -->
+
+	<script src="script.js"></script>
+</body>
+</html>

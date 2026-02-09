@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quorum - Gestão de Contratos Públicos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-tertiary: #f3f4f6;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+            --accent: #3b82f6;
+            --accent-light: #eff6ff;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #1f2937;
+                --bg-secondary: #111827;
+                --bg-tertiary: #0f1419;
+                --text-primary: #f3f4f6;
+                --text-secondary: #d1d5db;
+                --border: #374151;
+                --accent-light: #1e3a8a;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container-main {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 80px;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 0;
+            gap: 24px;
+        }
+
+        .logo {
+            width: 48px;
+            height: 48px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 20px;
+        }
+
+        .nav-icons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .nav-btn {
+            width: 48px;
+            height: 48px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .nav-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav-btn.active {
+            background: var(--accent-light);
+            color: var(--accent);
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* TOP BAR */
+        .topbar {
+            height: 64px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            gap: 24px;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .topbar-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .topbar-nav {
+            display: flex;
+            gap: 32px;
+            border-bottom: none;
+        }
+
+        .topbar-nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding-bottom: 20px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .topbar-nav a:hover,
+        .topbar-nav a.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-left: auto;
+        }
+
+        .profile-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .profile-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        /* CONTENT AREA */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* FORM */
+        .form-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        input,
+        select,
+        textarea {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+
+        .btn-submit {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-submit:hover {
+            background: #2563eb;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-delete {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+        }
+
+        /* TABLE */
+        .table-container {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .alert.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            display: block;
+        }
+
+        .alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        svg {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        @media (max-width: 768px) {
+            .topbar-nav {
+                display: none;
+            }
+
+            .topbar-right {
+                display: none;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-main">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="logo">Q</div>
+            <div class="nav-icons">
+                <button class="nav-btn active" onclick="switchPage('editais')" title="Editais">
+                    <svg viewBox="0 0 24 24"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-1.99.9-1.99 2L3 20c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>
+                </button>
+                <button class="nav-btn" onclick="switchPage('contratos')" title="Contratos">
+                    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="19" x2="12" y2="13"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+                </button>
+                <button class="nav-btn" onclick="switchPage('medicos')" title="Médicos">
+                    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </button>
+                <button class="nav-btn" onclick="switchPage('plantoes')" title="Plantões">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </button>
+                <button class="nav-btn" onclick="switchPage('atendimentos')" title="Atendimentos">
+                    <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="nav-btn" onclick="switchPage('relatorios')" title="Relatórios">
+                    <svg viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a1.5 1.5 0 0 0 0 3H17"/><path d="M17 13H9.5a1.5 1.5 0 0 0 0 3H17"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- TOPBAR -->
+            <div class="topbar">
+                <div class="topbar-left">
+                    <div class="topbar-title">Quorum</div>
+                    <nav class="topbar-nav">
+                        <a href="#" class="nav-link active" onclick="switchPage('editais'); return false;">Editais</a>
+                        <a href="#" class="nav-link" onclick="switchPage('contratos'); return false;">Financeiro</a>
+                        <a href="#" class="nav-link" onclick="switchPage('relatorios'); return false;">Relatórios</a>
+                    </nav>
+                </div>
+                <div class="topbar-right">
+                    <button class="profile-btn">
+                        <div class="profile-avatar">U</div>
+                        <span>Usuário</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- CONTENT AREA -->
+            <div class="content">
+                <!-- STATS -->
+                <div class="stats-grid" id="stats-container">
+                    <div class="stat-card">
+                        <div class="stat-label">Total de Editais</div>
+                        <div class="stat-value" id="stat-editais">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total de Médicos</div>
+                        <div class="stat-value" id="stat-medicos">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total de Plantões</div>
+                        <div class="stat-value" id="stat-plantoes">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total de Atendimentos</div>
+                        <div class="stat-value" id="stat-atendimentos">0</div>
+                    </div>
+                </div>
+
+                <!-- PAGES -->
+                <!-- EDITAIS PAGE -->
+                <div id="page-editais" class="page" style="display: block;">
+                    <div class="page-header">
+                        <h1 class="page-title">📄 Cadastro de Editais</h1>
+                    </div>
+
+                    <div id="alert-editais" class="alert"></div>
+
+                    <div class="form-card">
+                        <form onsubmit="criarEdital(event)">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Esferas</label>
+                                    <select id="edital-tipoOrgao" required onchange="mostrarCamposLocalizacao()">
+                                        <option value="">Selecione...</option>
+                                        <option value="Distrital">Distrital</option>
+                                        <option value="Estadual">Estadual</option>
+                                        <option value="Municipal">Municipal</option>
+                                        <option value="Federal">Federal</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Número do Edital</label>
+                                    <input type="text" id="edital-numero" placeholder="Ex: 001/2024" required>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Órgão</label>
+                                    <input type="text" id="edital-orgao" placeholder="Ex: Secretaria de Saúde" required>
+                                </div>
+                                <div class="form-group" id="div-estado" style="display:none;">
+                                    <label>Estado</label>
+                                    <select id="edital-estado" onchange="carregarMunicipios()">
+                                        <option value="">Selecione...</option>
+                                        <option value="AC">Acre</option>
+                                        <option value="AL">Alagoas</option>
+                                        <option value="AP">Amapá</option>
+                                        <option value="AM">Amazonas</option>
+                                        <option value="BA">Bahia</option>
+                                        <option value="CE">Ceará</option>
+                                        <option value="DF">Distrito Federal</option>
+                                        <option value="ES">Espírito Santo</option>
+                                        <option value="GO">Goiás</option>
+                                        <option value="MA">Maranhão</option>
+                                        <option value="MT">Mato Grosso</option>
+                                        <option value="MS">Mato Grosso do Sul</option>
+                                        <option value="MG">Minas Gerais</option>
+                                        <option value="PA">Pará</option>
+                                        <option value="PB">Paraíba</option>
+                                        <option value="PR">Paraná</option>
+                                        <option value="PE">Pernambuco</option>
+                                        <option value="PI">Piauí</option>
+                                        <option value="RJ">Rio de Janeiro</option>
+                                        <option value="RN">Rio Grande do Norte</option>
+                                        <option value="RS">Rio Grande do Sul</option>
+                                        <option value="RO">Rondônia</option>
+                                        <option value="RR">Roraima</option>
+                                        <option value="SC">Santa Catarina</option>
+                                        <option value="SP">São Paulo</option>
+                                        <option value="SE">Sergipe</option>
+                                        <option value="TO">Tocantins</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group" id="div-municipio" style="display:none;">
+                                    <label>Município</label>
+                                    <select id="edital-municipio">
+                                        <option value="">Selecione um município...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Vigência</label>
+                                    <input type="text" id="edital-vigencia" placeholder="Ex: 2024-2026" required>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-submit">+ Adicionar Edital</button>
+                        </form>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Número</th>
+                                    <th>Órgão</th>
+                                    <th>Esfera</th>
+                                    <th>Localização</th>
+                                    <th>Vigência</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="editais-list">
+                                <tr>
+                                    <td colspan="7" class="empty-state">Nenhum edital cadastrado</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- CONTRATOS PAGE -->
+                <div id="page-contratos" class="page" style="display: none;">
+                    <div class="page-header">
+                        <h1 class="page-title">📋 Cadastro de Contratos</h1>
+                    </div>
+                    <div id="alert-contratos" class="alert"></div>
+                    <div class="form-card">
+                        <form onsubmit="criarContrato(event)">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Edital</label>
+                                    <select id="contrato-edital" required>
+                                        <option value="">Selecione um edital</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Data de Início</label>
+                                    <input type="date" id="contrato-inicio" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Data de Término</label>
+                                    <input type="date" id="contrato-fim" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-submit">+ Adicionar Contrato</button>
+                        </form>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Edital</th>
+                                    <th>Início</th>
+                                    <th>Término</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contratos-list">
+                                <tr>
+                                    <td colspan="6" class="empty-state">Nenhum contrato cadastrado</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- MEDICOS PAGE -->
+                <div id="page-medicos" class="page" style="display: none;">
+                    <div class="page-header">
+                        <h1 class="page-title">👨‍⚕️ Cadastro de Médicos</h1>
+                    </div>
+                    <div id="alert-medicos" class="alert"></div>
+                    <div class="form-card">
+                        <form onsubmit="criarMedico(event)">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Nome do Médico</label>
+                                    <input type="text" id="medico-nome" placeholder="Ex: Dr. João Silva" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Especialidade</label>
+                                    <input type="text" id="medico-especialidade" placeholder="Ex: Cardiologia" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-submit">+ Adicionar Médico</button>
+                        </form>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome</th>
+                                    <th>Especialidade</th>
+                                    <th>Cadastro</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="medicos-list">
+                                <tr>
+                                    <td colspan="5" class="empty-state">Nenhum médico cadastrado</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PLANTOES PAGE -->
+                <div id="page-plantoes" class="page" style="display: none;">
+                    <div class="page-header">
+                        <h1 class="page-title">📅 Registro de Plantões</h1>
+                    </div>
+                    <div id="alert-plantoes" class="alert"></div>
+                    <div class="form-card">
+                        <form onsubmit="criarPlantao(event)">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Médico</label>
+                                    <select id="plantao-medico" required>
+                                        <option value="">Selecione um médico</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Data do Plantão</label>
+                                    <input type="date" id="plantao-data" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Carga Horária (horas)</label>
+                                    <input type="number" id="plantao-carga" min="0" max="24" step="0.5" placeholder="8" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-submit">+ Registrar Plantão</button>
+                        </form>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Médico</th>
+                                    <th>Data</th>
+                                    <th>Horas</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plantoes-list">
+                                <tr>
+                                    <td colspan="5" class="empty-state">Nenhum plantão registrado</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ATENDIMENTOS PAGE -->
+                <div id="page-atendimentos" class="page" style="display: none;">
+                    <div class="page-header">
+                        <h1 class="page-title">🏥 Registro de Atendimentos</h1>
+                    </div>
+                    <div id="alert-atendimentos" class="alert"></div>
+                    <div class="form-card">
+                        <form onsubmit="criarAtendimento(event)">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Médico</label>
+                                    <select id="atendimento-medico" required>
+                                        <option value="">Selecione um médico</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Data do Atendimento</label>
+                                    <input type="date" id="atendimento-data" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Descrição do Atendimento</label>
+                                <textarea id="atendimento-descricao" rows="3" placeholder="Descreva o atendimento realizado..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn-submit">+ Registrar Atendimento</button>
+                        </form>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Médico</th>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="atendimentos-list">
+                                <tr>
+                                    <td colspan="5" class="empty-state">Nenhum atendimento registrado</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- RELATORIOS PAGE -->
+                <div id="page-relatorios" class="page" style="display: none;">
+                    <div class="page-header">
+                        <h1 class="page-title">📊 Relatórios de Execução</h1>
+                    </div>
+                    <div id="alert-relatorios" class="alert"></div>
+                    <div class="form-card">
+                        <button class="btn-submit" onclick="carregarRelatorioGeral()">📊 Gerar Relatório Geral</button>
+                    </div>
+                    <div id="relatorios-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3000/api';
+        let municipiosPorEstado = {};
+
+        // Carregar municípios ao inicializar
+        async function carregarMunicipiosAPI() {
+            try {
+                const resp = await fetch(`${API}/municipios`);
+                municipiosPorEstado = await resp.json();
+            } catch (error) {
+                console.error('Erro ao carregar municípios:', error);
+            }
+        }
+
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+            document.getElementById(`page-${page}`).style.display = 'block';
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (page === 'editais') carregarEditais();
+            if (page === 'contratos') { carregarEditaisSelect(); carregarContratos(); }
+            if (page === 'medicos') carregarMedicos();
+            if (page === 'plantoes') { carregarMedicosSelect(); carregarPlantoes(); }
+            if (page === 'atendimentos') { carregarMedicosSelect2(); carregarAtendimentos(); }
+            if (page === 'relatorios') carregarRelatorioGeral();
+        }
+
+        function mostrarAlerta(tipo, mensagem) {
+            const alertEl = document.getElementById(`alert-${tipo}`);
+            alertEl.className = `alert ${mensagem.includes('✓') ? 'success' : 'error'}`;
+            alertEl.textContent = mensagem;
+            setTimeout(() => { alertEl.textContent = ''; alertEl.className = 'alert'; }, 4000);
+        }
+
+        function atualizarDashboard() {
+            fetch(`${API}/editais`).then(r => r.json()).then(d => document.getElementById('stat-editais').textContent = d.length || 0);
+            fetch(`${API}/medicos`).then(r => r.json()).then(d => document.getElementById('stat-medicos').textContent = d.length || 0);
+            fetch(`${API}/plantoes`).then(r => r.json()).then(d => document.getElementById('stat-plantoes').textContent = d.length || 0);
+            fetch(`${API}/atendimentos`).then(r => r.json()).then(d => document.getElementById('stat-atendimentos').textContent = d.length || 0);
+        }
+
+        // EDITAIS
+        function mostrarCamposLocalizacao() {
+            const tipoOrgao = document.getElementById('edital-tipoOrgao').value;
+            const divEstado = document.getElementById('div-estado');
+            const divMunicipio = document.getElementById('div-municipio');
+
+            if (tipoOrgao === 'Estadual' || tipoOrgao === 'Municipal' || tipoOrgao === 'Distrital') {
+                divEstado.style.display = 'block';
+                divMunicipio.style.display = 'block';
+            } else {
+                divEstado.style.display = 'none';
+                divMunicipio.style.display = 'none';
+                document.getElementById('edital-estado').value = '';
+                document.getElementById('edital-municipio').value = '';
+            }
+        }
+
+        function carregarMunicipios() {
+            const estado = document.getElementById('edital-estado').value;
+            const selectMunicipio = document.getElementById('edital-municipio');
+            selectMunicipio.innerHTML = '<option value="">Selecione um município...</option>';
+
+            if (estado && municipiosPorEstado[estado]) {
+                municipiosPorEstado[estado].forEach(municipio => {
+                    const option = document.createElement('option');
+                    option.value = municipio;
+                    option.textContent = municipio;
+                    selectMunicipio.appendChild(option);
+                });
+            }
+        }
+
+        async function criarEdital(event) {
+            event.preventDefault();
+            const data = {
+                numero: document.getElementById('edital-numero').value,
+                orgao: document.getElementById('edital-orgao').value,
+                tipoOrgao: document.getElementById('edital-tipoOrgao').value,
+                estado: document.getElementById('edital-estado').value,
+                municipio: document.getElementById('edital-municipio').value,
+                vigencia: document.getElementById('edital-vigencia').value
+            };
+
+            try {
+                const resp = await fetch(`${API}/editais`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (resp.ok) {
+                    mostrarAlerta('editais', '✓ Edital criado com sucesso!');
+                    event.target.reset();
+                    mostrarCamposLocalizacao();
+                    carregarEditais();
+                    atualizarDashboard();
+                } else {
+                    const err = await resp.json();
+                    mostrarAlerta('editais', `✗ Erro: ${err.erro}`);
+                }
+            } catch (e) {
+                mostrarAlerta('editais', `✗ Erro: ${e.message}`);
+            }
+        }
+
+        async function carregarEditais() {
+            try {
+                const resp = await fetch(`${API}/editais`);
+                const editais = await resp.json();
+                const tbody = document.getElementById('editais-list');
+                tbody.innerHTML = '';
+
+                if (editais.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum edital cadastrado</td></tr>';
+                    return;
+                }
+
+                editais.forEach(e => {
+                    const localizacao = e.municipio ? `${e.municipio} (${e.estado})` : (e.estado ? e.estado : '-');
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>#${e.id}</td>
+                        <td>${e.numero}</td>
+                        <td>${e.orgao}</td>
+                        <td>${e.tipoOrgao || '-'}</td>
+                        <td>${localizacao}</td>
+                        <td>${e.vigencia}</td>
+                        <td><button class="btn-delete" onclick="deletarEdital(${e.id})">Deletar</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.error('Erro', e);
+            }
+        }
+
+        async function deletarEdital(id) {
+            if (!confirm('Tem certeza?')) return;
+            try {
+                await fetch(`${API}/editais/${id}`, { method: 'DELETE' });
+                carregarEditais();
+                atualizarDashboard();
+            } catch (e) {
+                alert('Erro');
+            }
+        }
+
+        // CONTRATOS
+        async function carregarEditaisSelect() {
+            try {
+                const resp = await fetch(`${API}/editais`);
+                const editais = await resp.json();
+                const select = document.getElementById('contrato-edital');
+                select.innerHTML = '<option value="">Selecione um edital</option>';
+                editais.forEach(e => {
+                    const opt = document.createElement('option');
+                    opt.value = e.id;
+                    opt.textContent = `${e.numero} - ${e.orgao}`;
+                    select.appendChild(opt);
+                });
+            } catch (e) {}
+        }
+
+        async function criarContrato(event) {
+            event.preventDefault();
+            const data = {
+                editalId: document.getElementById('contrato-edital').value,
+                dataInicio: document.getElementById('contrato-inicio').value,
+                dataFim: document.getElementById('contrato-fim').value
+            };
+
+            try {
+                const resp = await fetch(`${API}/contratos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (resp.ok) {
+                    mostrarAlerta('contratos', '✓ Contrato criado com sucesso!');
+                    event.target.reset();
+                    carregarContratos();
+                    atualizarDashboard();
+                }
+            } catch (e) {
+                mostrarAlerta('contratos', `✗ Erro: ${e.message}`);
+            }
+        }
+
+        async function carregarContratos() {
+            try {
+                const resp = await fetch(`${API}/contratos`);
+                const contratos = await resp.json();
+                const tbody = document.getElementById('contratos-list');
+                tbody.innerHTML = '';
+
+                if (contratos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum contrato cadastrado</td></tr>';
+                    return;
+                }
+
+                contratos.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>#${c.id}</td>
+                        <td>${c.numero || 'N/A'}</td>
+                        <td>${new Date(c.dataInicio).toLocaleDateString()}</td>
+                        <td>${new Date(c.dataFim).toLocaleDateString()}</td>
+                        <td><span class="badge badge-success">${c.status}</span></td>
+                        <td><button class="btn-delete" onclick="deletarContrato(${c.id})">Deletar</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {}
+        }
+
+        async function deletarContrato(id) {
+            if (!confirm('Tem certeza?')) return;
+            try {
+                await fetch(`${API}/contratos/${id}`, { method: 'DELETE' });
+                carregarContratos();
+                atualizarDashboard();
+            } catch (e) {}
+        }
+
+        // MÉDICOS
+        async function criarMedico(event) {
+            event.preventDefault();
+            const data = {
+                nome: document.getElementById('medico-nome').value,
+                especialidade: document.getElementById('medico-especialidade').value
+            };
+
+            try {
+                const resp = await fetch(`${API}/medicos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (resp.ok) {
+                    mostrarAlerta('medicos', '✓ Médico criado com sucesso!');
+                    event.target.reset();
+                    carregarMedicos();
+                    carregarMedicosSelect();
+                    carregarMedicosSelect2();
+                    atualizarDashboard();
+                }
+            } catch (e) {
+                mostrarAlerta('medicos', `✗ Erro: ${e.message}`);
+            }
+        }
+
+        async function carregarMedicos() {
+            try {
+                const resp = await fetch(`${API}/medicos`);
+                const medicos = await resp.json();
+                const tbody = document.getElementById('medicos-list');
+                tbody.innerHTML = '';
+
+                if (medicos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum médico cadastrado</td></tr>';
+                    return;
+                }
+
+                medicos.forEach(m => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>#${m.id}</td>
+                        <td>${m.nome}</td>
+                        <td>${m.especialidade}</td>
+                        <td>${new Date(m.dataCriacao).toLocaleDateString()}</td>
+                        <td><button class="btn-delete" onclick="deletarMedico(${m.id})">Deletar</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {}
+        }
+
+        async function carregarMedicosSelect() {
+            try {
+                const resp = await fetch(`${API}/medicos`);
+                const medicos = await resp.json();
+                const select = document.getElementById('plantao-medico');
+                select.innerHTML = '<option value="">Selecione um médico</option>';
+                medicos.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = `${m.nome} - ${m.especialidade}`;
+                    select.appendChild(opt);
+                });
+            } catch (e) {}
+        }
+
+        async function carregarMedicosSelect2() {
+            try {
+                const resp = await fetch(`${API}/medicos`);
+                const medicos = await resp.json();
+                const select = document.getElementById('atendimento-medico');
+                select.innerHTML = '<option value="">Selecione um médico</option>';
+                medicos.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = `${m.nome} - ${m.especialidade}`;
+                    select.appendChild(opt);
+                });
+            } catch (e) {}
+        }
+
+        async function deletarMedico(id) {
+            if (!confirm('Tem certeza?')) return;
+            try {
+                await fetch(`${API}/medicos/${id}`, { method: 'DELETE' });
+                carregarMedicos();
+                atualizarDashboard();
+            } catch (e) {}
+        }
+
+        // PLANTÕES
+        async function criarPlantao(event) {
+            event.preventDefault();
+            const data = {
+                medicoId: document.getElementById('plantao-medico').value,
+                data: document.getElementById('plantao-data').value,
+                cargaHoraria: document.getElementById('plantao-carga').value
+            };
+
+            try {
+                const resp = await fetch(`${API}/plantoes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (resp.ok) {
+                    mostrarAlerta('plantoes', '✓ Plantão registrado com sucesso!');
+                    event.target.reset();
+                    carregarPlantoes();
+                    atualizarDashboard();
+                }
+            } catch (e) {
+                mostrarAlerta('plantoes', `✗ Erro: ${e.message}`);
+            }
+        }
+
+        async function carregarPlantoes() {
+            try {
+                const resp = await fetch(`${API}/plantoes`);
+                const plantoes = await resp.json();
+                const tbody = document.getElementById('plantoes-list');
+                tbody.innerHTML = '';
+
+                if (plantoes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum plantão registrado</td></tr>';
+                    return;
+                }
+
+                plantoes.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>#${p.id}</td>
+                        <td>${p.nome || 'N/A'}</td>
+                        <td>${new Date(p.data).toLocaleDateString()}</td>
+                        <td>${p.cargaHoraria}h</td>
+                        <td><button class="btn-delete" onclick="deletarPlantao(${p.id})">Deletar</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {}
+        }
+
+        async function deletarPlantao(id) {
+            if (!confirm('Tem certeza?')) return;
+            try {
+                await fetch(`${API}/plantoes/${id}`, { method: 'DELETE' });
+                carregarPlantoes();
+                atualizarDashboard();
+            } catch (e) {}
+        }
+
+        // ATENDIMENTOS
+        async function criarAtendimento(event) {
+            event.preventDefault();
+            const data = {
+                medicoId: document.getElementById('atendimento-medico').value,
+                data: document.getElementById('atendimento-data').value,
+                descricao: document.getElementById('atendimento-descricao').value
+            };
+
+            try {
+                const resp = await fetch(`${API}/atendimentos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (resp.ok) {
+                    mostrarAlerta('atendimentos', '✓ Atendimento registrado com sucesso!');
+                    event.target.reset();
+                    carregarAtendimentos();
+                    atualizarDashboard();
+                }
+            } catch (e) {
+                mostrarAlerta('atendimentos', `✗ Erro: ${e.message}`);
+            }
+        }
+
+        async function carregarAtendimentos() {
+            try {
+                const resp = await fetch(`${API}/atendimentos`);
+                const atendimentos = await resp.json();
+                const tbody = document.getElementById('atendimentos-list');
+                tbody.innerHTML = '';
+
+                if (atendimentos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum atendimento registrado</td></tr>';
+                    return;
+                }
+
+                atendimentos.forEach(a => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>#${a.id}</td>
+                        <td>${a.nome || 'N/A'}</td>
+                        <td>${new Date(a.data).toLocaleDateString()}</td>
+                        <td>${a.descricao.substring(0, 40)}...</td>
+                        <td><button class="btn-delete" onclick="deletarAtendimento(${a.id})">Deletar</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {}
+        }
+
+        async function deletarAtendimento(id) {
+            if (!confirm('Tem certeza?')) return;
+            try {
+                await fetch(`${API}/atendimentos/${id}`, { method: 'DELETE' });
+                carregarAtendimentos();
+                atualizarDashboard();
+            } catch (e) {}
+        }
+
+        // RELATÓRIOS
+        async function carregarRelatorioGeral() {
+            try {
+                const resp = await fetch(`${API}/relatorios/geral`);
+                const relatorios = await resp.json();
+                const container = document.getElementById('relatorios-list');
+                container.innerHTML = '';
+
+                if (relatorios.length === 0) {
+                    container.innerHTML = '<p class="empty-state">Nenhum médico cadastrado</p>';
+                    return;
+                }
+
+                relatorios.forEach(r => {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px;';
+                    div.innerHTML = `
+                        <h3 style="color: var(--accent); margin-bottom: 12px;">👨‍⚕️ ${r.nome}</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                            <div><strong>Especialidade:</strong> ${r.especialidade}</div>
+                            <div><strong>Plantões:</strong> ${r.plantoes}</div>
+                            <div><strong>Horas:</strong> ${r.horas}h</div>
+                            <div><strong>Atendimentos:</strong> ${r.atendimentos}</div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch (e) {
+                alert('Erro ao carregar relatórios');
+            }
+        }
+
+        window.addEventListener('load', () => {
+            carregarMunicipiosAPI();
+            atualizarDashboard();
+            carregarEditais();
+        });
+    </script>
+</body>
+</html>
