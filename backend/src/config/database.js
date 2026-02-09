@@ -101,13 +101,24 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS contratos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       editalId INTEGER NOT NULL,
+      numero TEXT,
+      objeto TEXT,
+      valor REAL,
+      responsavel TEXT,
       dataInicio DATE NOT NULL,
       dataFim DATE NOT NULL,
       status TEXT DEFAULT 'ativo',
+      observacoes TEXT,
       dataCriacao DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (editalId) REFERENCES editais(id)
     )
   `);
+
+  ensureColumn('contratos', 'numero', 'TEXT');
+  ensureColumn('contratos', 'objeto', 'TEXT');
+  ensureColumn('contratos', 'valor', 'REAL');
+  ensureColumn('contratos', 'responsavel', 'TEXT');
+  ensureColumn('contratos', 'observacoes', 'TEXT');
 
   // Tabela de Médicos
   db.run(`

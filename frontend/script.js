@@ -165,15 +165,31 @@ window.addEventListener('click', function (e) {
     }
 });
 
-// ========== CONTRATOS TABLE (API) ==========
-// Carrega dados reais da API e renderiza a tabela de contratos
-const contratosTableBody = document.getElementById('contratosTableBody');
+// ========== CONTRATOS PAGE (FULL CRUD) ==========
+let contratosCache = [];
+let editaisCache = [];
+const contratosPageTableBody = document.getElementById('contratosPageTableBody');
+const contratosTableBody = document.getElementById('contratosTableBody'); // dashboard table
 
 function formatDate(value) {
     if (!value) return 'Nao informado';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
     return date.toLocaleDateString('pt-BR');
+}
+
+function formatCurrency(value) {
+    if (!value && value !== 0) return '-';
+    return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function getContratoStatusMeta(status) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'ativo') return { label: 'Ativo', css: 'completed', color: '#27ae60' };
+    if (normalized === 'encerrado') return { label: 'Encerrado', css: 'process', color: '#888' };
+    if (normalized === 'suspenso') return { label: 'Suspenso', css: 'pending', color: '#f39c12' };
+    if (normalized === 'cancelado') return { label: 'Cancelado', css: 'pending', color: '#e74c3c' };
+    return { label: 'Em andamento', css: 'process', color: '#3498db' };
 }
 
 function getBadgeText(rawLabel) {
@@ -190,6 +206,36 @@ function getStatusMeta(status) {
     return { label: 'Em andamento', css: 'process', color: 'FD7238' };
 }
 
+// Build row for the contratos PAGE table (full version with actions)
+function buildContratoPageRow(contrato) {
+    const statusMeta = getContratoStatusMeta(contrato.status);
+    const numero = contrato.numero || `CT-${contrato.id}`;
+    const editalLabel = contrato.editalNumero || `Edital #${contrato.editalId}`;
+    const orgao = contrato.orgao || '-';
+    const periodo = `${formatDate(contrato.dataInicio)} - ${formatDate(contrato.dataFim)}`;
+    const valor = formatCurrency(contrato.valor);
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td><span class="contrato-numero">${numero}</span></td>
+        <td><span class="contrato-edital">${editalLabel}</span></td>
+        <td>${orgao}</td>
+        <td>${periodo}</td>
+        <td><span class="contrato-valor">${valor}</span></td>
+        <td><span class="status ${statusMeta.css}">${statusMeta.label}</span></td>
+        <td>
+            <button class="btn-icon" data-action="editar-contrato" data-id="${contrato.id}" title="Editar">
+                <i class='bx bxs-edit'></i>
+            </button>
+            <button class="btn-icon danger" data-action="deletar-contrato" data-id="${contrato.id}" title="Excluir">
+                <i class='bx bxs-trash'></i>
+            </button>
+        </td>
+    `;
+    return row;
+}
+
+// Build row for the DASHBOARD table (compact, no actions)
 function buildContratoRow(contrato) {
     const statusMeta = getStatusMeta(contrato.status);
     const contratoNumero = contrato.numero ? `#${contrato.numero}` : `#${contrato.id}`;
@@ -197,8 +243,8 @@ function buildContratoRow(contrato) {
     const contratoImage = `https://placehold.co/36x36/${statusMeta.color}/FFFFFF?text=${encodeURIComponent(contratoBadge)}`;
     const periodo = `${formatDate(contrato.dataInicio)} - ${formatDate(contrato.dataFim)}`;
     const orgao = contrato.orgao || 'Nao informado';
-    const municipio = contrato.municipio || '';
-    const estado = contrato.estado || '';
+    const municipio = contrato.editalMunicipio || '';
+    const estado = contrato.editalEstado || '';
     const localidade = municipio && estado ? `${municipio} - ${estado}` : (municipio || estado || 'Nao informado');
 
     const row = document.createElement('tr');
@@ -236,32 +282,240 @@ function buildContratoRow(contrato) {
     return row;
 }
 
-async function loadContratosTable() {
-    if (!contratosTableBody) return;
+function updateContratosResumo() {
+    const total = contratosCache.length;
+    const ativos = contratosCache.filter(c => (c.status || '').toLowerCase() === 'ativo').length;
+    const suspensos = contratosCache.filter(c => (c.status || '').toLowerCase() === 'suspenso').length;
+    const encerrados = contratosCache.filter(c => ['encerrado', 'cancelado'].includes((c.status || '').toLowerCase())).length;
 
-    contratosTableBody.innerHTML = '<tr><td colspan="5">Carregando contratos...</td></tr>';
+    const elTotal = document.getElementById('contratosResumoTotal');
+    const elAtivos = document.getElementById('contratosResumoAtivos');
+    const elSuspensos = document.getElementById('contratosResumoSuspensos');
+    const elEncerrados = document.getElementById('contratosResumoEncerrados');
+
+    if (elTotal) elTotal.textContent = total;
+    if (elAtivos) elAtivos.textContent = ativos;
+    if (elSuspensos) elSuspensos.textContent = suspensos;
+    if (elEncerrados) elEncerrados.textContent = encerrados;
+}
+
+function applyContratosFilters() {
+    const statusFilter = (document.getElementById('contratosFilterStatus')?.value || '').toLowerCase();
+    const editalFilter = document.getElementById('contratosFilterEdital')?.value || '';
+    const buscaFilter = (document.getElementById('contratosFilterBusca')?.value || '').toLowerCase();
+
+    const filtered = contratosCache.filter(c => {
+        if (statusFilter && (c.status || '').toLowerCase() !== statusFilter) return false;
+        if (editalFilter && String(c.editalId) !== editalFilter) return false;
+        if (buscaFilter) {
+            const searchable = [c.numero, c.orgao, c.responsavel, c.objeto, c.editalNumero].join(' ').toLowerCase();
+            if (!searchable.includes(buscaFilter)) return false;
+        }
+        return true;
+    });
+
+    renderContratosPageTable(filtered);
+}
+
+function renderContratosPageTable(list) {
+    if (!contratosPageTableBody) return;
+    if (!list || list.length === 0) {
+        contratosPageTableBody.innerHTML = '<tr><td colspan="7">Nenhum contrato encontrado.</td></tr>';
+        return;
+    }
+    contratosPageTableBody.innerHTML = '';
+    list.forEach(c => contratosPageTableBody.appendChild(buildContratoPageRow(c)));
+}
+
+async function loadEditaisForSelect() {
+    try {
+        const response = await fetch('/api/editais');
+        if (!response.ok) throw new Error('Falha ao carregar editais');
+        editaisCache = await response.json();
+
+        // Populate modal select
+        const select = document.getElementById('contratoEditalId');
+        if (select) {
+            select.innerHTML = '<option value="">Selecione o edital</option>';
+            editaisCache.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = `${e.numero} - ${e.orgao || ''}`;
+                select.appendChild(opt);
+            });
+        }
+
+        // Populate filter select
+        const filterSelect = document.getElementById('contratosFilterEdital');
+        if (filterSelect) {
+            filterSelect.innerHTML = '<option value="">Todos</option>';
+            editaisCache.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = e.numero;
+                filterSelect.appendChild(opt);
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao carregar editais:', error);
+    }
+}
+
+async function loadContratos() {
+    if (contratosPageTableBody) {
+        contratosPageTableBody.innerHTML = '<tr><td colspan="7">Carregando contratos...</td></tr>';
+    }
 
     try {
         const response = await fetch('/api/contratos');
-        if (!response.ok) {
-            throw new Error('Falha ao carregar contratos');
-        }
+        if (!response.ok) throw new Error('Falha ao carregar contratos');
 
-        const contratos = await response.json();
-        if (!Array.isArray(contratos) || contratos.length === 0) {
-            contratosTableBody.innerHTML = '<tr><td colspan="5">Nenhum contrato cadastrado.</td></tr>';
-            return;
-        }
+        contratosCache = await response.json();
+        if (!Array.isArray(contratosCache)) contratosCache = [];
 
-        contratosTableBody.innerHTML = '';
-        contratos.forEach(contrato => {
-            contratosTableBody.appendChild(buildContratoRow(contrato));
-        });
+        renderContratosPageTable(contratosCache);
+        updateContratosResumo();
+
+        // Also update dashboard table
+        if (contratosTableBody) {
+            if (contratosCache.length === 0) {
+                contratosTableBody.innerHTML = '<tr><td colspan="5">Nenhum contrato cadastrado.</td></tr>';
+            } else {
+                contratosTableBody.innerHTML = '';
+                contratosCache.forEach(c => contratosTableBody.appendChild(buildContratoRow(c)));
+            }
+        }
     } catch (error) {
-        contratosTableBody.innerHTML = '<tr><td colspan="5">Erro ao carregar contratos.</td></tr>';
+        if (contratosPageTableBody) {
+            contratosPageTableBody.innerHTML = '<tr><td colspan="7">Erro ao carregar contratos.</td></tr>';
+        }
+        if (contratosTableBody) {
+            contratosTableBody.innerHTML = '<tr><td colspan="5">Erro ao carregar contratos.</td></tr>';
+        }
         console.error(error);
     }
 }
+
+// Alias for dashboard backward compat
+async function loadContratosTable() {
+    await loadContratos();
+}
+
+// Modal management
+const contratoModal = document.getElementById('contratoModal');
+const contratoForm = document.getElementById('contratoForm');
+const contratoModalTitulo = document.getElementById('contratoModalTitulo');
+
+function openContratoModal(contrato = null) {
+    if (!contratoModal || !contratoForm) return;
+
+    contratoForm.reset();
+    document.getElementById('contratoId').value = '';
+    document.getElementById('contratoStatus').value = 'ativo';
+
+    if (contrato) {
+        contratoModalTitulo.textContent = 'Editar contrato';
+        document.getElementById('contratoId').value = contrato.id;
+        document.getElementById('contratoEditalId').value = contrato.editalId;
+        document.getElementById('contratoNumero').value = contrato.numero || '';
+        document.getElementById('contratoObjeto').value = contrato.objeto || '';
+        document.getElementById('contratoValor').value = contrato.valor || '';
+        document.getElementById('contratoResponsavel').value = contrato.responsavel || '';
+        document.getElementById('contratoDataInicio').value = contrato.dataInicio || '';
+        document.getElementById('contratoDataFim').value = contrato.dataFim || '';
+        document.getElementById('contratoStatus').value = contrato.status || 'ativo';
+        document.getElementById('contratoObservacoes').value = contrato.observacoes || '';
+    } else {
+        contratoModalTitulo.textContent = 'Cadastro de contrato';
+    }
+
+    contratoModal.classList.add('show');
+    contratoModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeContratoModal() {
+    if (!contratoModal) return;
+    contratoModal.classList.remove('show');
+    contratoModal.setAttribute('aria-hidden', 'true');
+}
+
+// Event listeners
+document.getElementById('abrirCadastroContrato')?.addEventListener('click', () => openContratoModal());
+document.getElementById('fecharCadastroContrato')?.addEventListener('click', closeContratoModal);
+document.getElementById('cancelarContrato')?.addEventListener('click', closeContratoModal);
+
+contratoModal?.addEventListener('click', function (e) {
+    if (e.target === contratoModal) closeContratoModal();
+});
+
+contratoForm?.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const id = document.getElementById('contratoId').value;
+    const dados = {
+        editalId: document.getElementById('contratoEditalId').value,
+        numero: document.getElementById('contratoNumero').value,
+        objeto: document.getElementById('contratoObjeto').value,
+        valor: document.getElementById('contratoValor').value || null,
+        responsavel: document.getElementById('contratoResponsavel').value,
+        dataInicio: document.getElementById('contratoDataInicio').value,
+        dataFim: document.getElementById('contratoDataFim').value,
+        status: document.getElementById('contratoStatus').value,
+        observacoes: document.getElementById('contratoObservacoes').value
+    };
+
+    try {
+        const url = id ? `/api/contratos/${id}` : '/api/contratos';
+        const method = id ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.erro || 'Erro ao salvar contrato');
+        }
+
+        closeContratoModal();
+        await loadContratos();
+    } catch (error) {
+        alert(error.message);
+        console.error(error);
+    }
+});
+
+// Table action delegation (edit/delete)
+contratosPageTableBody?.addEventListener('click', async function (e) {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+
+    if (action === 'editar-contrato') {
+        const contrato = contratosCache.find(c => String(c.id) === String(id));
+        if (contrato) openContratoModal(contrato);
+    }
+
+    if (action === 'deletar-contrato') {
+        if (!confirm('Deseja realmente excluir este contrato?')) return;
+        try {
+            const response = await fetch(`/api/contratos/${id}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Falha ao excluir contrato');
+            await loadContratos();
+        } catch (error) {
+            console.error(error);
+        }
+    }
+});
+
+// Filters
+document.getElementById('contratosFilterStatus')?.addEventListener('change', applyContratosFilters);
+document.getElementById('contratosFilterEdital')?.addEventListener('change', applyContratosFilters);
+document.getElementById('contratosFilterBusca')?.addEventListener('input', applyContratosFilters);
 
 // ========== TODO ITEM INTERACTIONS ==========
 // Permite marcar/desmarcar itens de pendências (futuro: salvar no backend)
@@ -1021,6 +1275,7 @@ if (plantoesFilterPeriodo) {
 }
 
 window.addEventListener('load', loadContratosTable);
+window.addEventListener('load', loadEditaisForSelect);
 window.addEventListener('load', function () {
     setActivePage('dashboard');
 });

@@ -883,6 +883,209 @@ body:not(.dark) #content nav .swith-lm .bxs-moon {
 	margin-bottom: 12px;
 }
 
+/* Contratos Page */
+#content main .contratos-summary-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 20px;
+	margin-top: 24px;
+}
+
+#content main .contratos-summary-card {
+	background: var(--light);
+	border-radius: 16px;
+	padding: 20px;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+#content main .contratos-summary-icon {
+	width: 48px;
+	height: 48px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 12px;
+	font-size: 22px;
+}
+
+#content main .contratos-summary-icon.blue {
+	background: var(--light-blue);
+	color: var(--blue);
+}
+
+#content main .contratos-summary-icon.green {
+	background: #e6f7ee;
+	color: #27ae60;
+}
+
+#content main .contratos-summary-icon.yellow {
+	background: #fff8e6;
+	color: #f39c12;
+}
+
+#content main .contratos-summary-icon.grey {
+	background: #f0f0f0;
+	color: #888;
+}
+
+#content main .contratos-summary-info {
+	display: flex;
+	flex-direction: column;
+}
+
+#content main .contratos-summary-info strong {
+	font-size: 24px;
+	color: var(--dark);
+}
+
+#content main .contratos-summary-info span {
+	font-size: 13px;
+	color: var(--dark-grey);
+}
+
+#content main .contratos-card {
+	background: var(--light);
+	border-radius: 20px;
+	padding: 24px;
+	margin-top: 24px;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+#content main .contratos-card .head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 20px;
+}
+
+#content main .contratos-card .head h3 {
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--dark);
+}
+
+#content main .contratos-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+#content main .contratos-filters {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 16px;
+	margin-bottom: 20px;
+}
+
+#content main .contratos-filters label {
+	display: block;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--dark-grey);
+	margin-bottom: 6px;
+	text-transform: uppercase;
+}
+
+#content main .contratos-filters select,
+#content main .contratos-filters input {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid #ddd;
+	border-radius: 10px;
+	font-size: 14px;
+	background: var(--grey);
+	color: var(--dark);
+}
+
+#content main .contratos-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+#content main .contratos-table thead th {
+	text-align: left;
+	padding: 12px 14px;
+	font-size: 12px;
+	text-transform: uppercase;
+	color: var(--dark-grey);
+	border-bottom: 2px solid #eee;
+}
+
+#content main .contratos-table tbody td {
+	padding: 14px;
+	font-size: 14px;
+	color: var(--dark);
+	border-bottom: 1px solid #f0f0f0;
+	vertical-align: middle;
+}
+
+#content main .contratos-table tbody tr:hover {
+	background: rgba(54, 162, 235, 0.04);
+}
+
+#content main .contratos-table .contrato-numero {
+	font-weight: 600;
+	color: var(--blue);
+}
+
+#content main .contratos-table .contrato-edital {
+	font-size: 13px;
+	color: var(--dark-grey);
+}
+
+#content main .contratos-table .contrato-valor {
+	font-weight: 600;
+}
+
+#content main .contrato-form .form-row {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 16px;
+}
+
+#content main .contrato-form .form-group {
+	margin-bottom: 16px;
+}
+
+#content main .contrato-form label {
+	display: block;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--dark-grey);
+	margin-bottom: 6px;
+}
+
+#content main .contrato-form input,
+#content main .contrato-form select,
+#content main .contrato-form textarea {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid #ddd;
+	border-radius: 10px;
+	font-size: 14px;
+	background: var(--grey);
+	color: var(--dark);
+	font-family: inherit;
+}
+
+#content main .contrato-form textarea {
+	resize: vertical;
+}
+
+#content main .contrato-form .form-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	margin-top: 8px;
+}
+
+.modal-content.modal-lg {
+	max-width: 680px;
+}
+
 /* Medicos Page */
 #content main .medicos-grid {
 	display: grid;
@@ -1018,7 +1221,7 @@ body:not(.dark) #content nav .swith-lm .bxs-moon {
 /* Plantoes Page */
 #content main .plantoes-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	grid-template-columns: 2fr 1fr;
 	grid-gap: 24px;
 	margin-top: 24px;
 }

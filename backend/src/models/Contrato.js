@@ -5,12 +5,13 @@ const db = require('../config/database');
 
 class Contrato {
   // Criar novo contrato
-  static criar(editalId, dataInicio, dataFim) {
+  static criar({ editalId, numero, objeto, valor, responsavel, dataInicio, dataFim, observacoes }) {
     return new Promise((resolve, reject) => {
-      const sql = 'INSERT INTO contratos (editalId, dataInicio, dataFim) VALUES (?, ?, ?)';
-      db.run(sql, [editalId, dataInicio, dataFim], function(err) {
+      const sql = `INSERT INTO contratos (editalId, numero, objeto, valor, responsavel, dataInicio, dataFim, observacoes)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+      db.run(sql, [editalId, numero, objeto, valor, responsavel, dataInicio, dataFim, observacoes], function(err) {
         if (err) reject(err);
-        else resolve({ id: this.lastID, editalId, dataInicio, dataFim, status: 'ativo' });
+        else resolve({ id: this.lastID, editalId, numero, objeto, valor, responsavel, dataInicio, dataFim, observacoes, status: 'ativo' });
       });
     });
   }
@@ -18,7 +19,14 @@ class Contrato {
   // Listar todos os contratos
   static listar() {
     return new Promise((resolve, reject) => {
-      const sql = 'SELECT contratos.*, editais.numero FROM contratos LEFT JOIN editais ON contratos.editalId = editais.id ORDER BY contratos.dataCriacao DESC';
+      const sql = `SELECT contratos.*,
+                          editais.numero AS editalNumero,
+                          editais.orgao,
+                          editais.municipio AS editalMunicipio,
+                          editais.estado AS editalEstado
+                   FROM contratos
+                   LEFT JOIN editais ON contratos.editalId = editais.id
+                   ORDER BY contratos.dataCriacao DESC`;
       db.all(sql, [], (err, rows) => {
         if (err) reject(err);
         else resolve(rows || []);
@@ -29,10 +37,29 @@ class Contrato {
   // Buscar contrato por ID
   static buscarPorId(id) {
     return new Promise((resolve, reject) => {
-      const sql = 'SELECT contratos.*, editais.numero FROM contratos LEFT JOIN editais ON contratos.editalId = editais.id WHERE contratos.id = ?';
+      const sql = `SELECT contratos.*,
+                          editais.numero AS editalNumero,
+                          editais.orgao,
+                          editais.municipio AS editalMunicipio,
+                          editais.estado AS editalEstado
+                   FROM contratos
+                   LEFT JOIN editais ON contratos.editalId = editais.id
+                   WHERE contratos.id = ?`;
       db.get(sql, [id], (err, row) => {
         if (err) reject(err);
         else resolve(row);
+      });
+    });
+  }
+
+  // Atualizar contrato
+  static atualizar(id, { editalId, numero, objeto, valor, responsavel, dataInicio, dataFim, status, observacoes }) {
+    return new Promise((resolve, reject) => {
+      const sql = `UPDATE contratos SET editalId = ?, numero = ?, objeto = ?, valor = ?, responsavel = ?,
+                   dataInicio = ?, dataFim = ?, status = ?, observacoes = ? WHERE id = ?`;
+      db.run(sql, [editalId, numero, objeto, valor, responsavel, dataInicio, dataFim, status, observacoes, id], function(err) {
+        if (err) reject(err);
+        else resolve({ id, editalId, numero, objeto, valor, responsavel, dataInicio, dataFim, status, observacoes });
       });
     });
   }

@@ -17,8 +17,7 @@ class ContratosController {
   // POST /api/contratos - Criar novo contrato
   async criar(req, res) {
     try {
-      const { editalId, dataInicio, dataFim } = req.body;
-      const contrato = await ContratosService.criarContrato(editalId, dataInicio, dataFim);
+      const contrato = await ContratosService.criarContrato(req.body);
       res.status(201).json(contrato);
     } catch (erro) {
       res.status(400).json({ erro: erro.message });
@@ -30,6 +29,17 @@ class ContratosController {
     try {
       const { id } = req.params;
       const contrato = await ContratosService.buscarContratosPorId(id);
+      res.json(contrato);
+    } catch (erro) {
+      res.status(400).json({ erro: erro.message });
+    }
+  }
+
+  // PUT /api/contratos/:id - Atualizar contrato
+  async atualizar(req, res) {
+    try {
+      const { id } = req.params;
+      const contrato = await ContratosService.atualizarContrato(id, req.body);
       res.json(contrato);
     } catch (erro) {
       res.status(400).json({ erro: erro.message });

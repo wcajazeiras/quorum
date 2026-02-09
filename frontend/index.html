@@ -29,15 +29,15 @@
 				</a>
 			</li>
 			<li>
-				<a href="#" data-page="contratos">
-					<i class='bx bxs-file-doc bx-sm' ></i>
-					<span class="text">Contratos</span>
-				</a>
-			</li>
-			<li>
 				<a href="#" data-page="editais">
 					<i class='bx bxs-book-open bx-sm' ></i>
 					<span class="text">Editais</span>
+				</a>
+			</li>
+			<li>
+				<a href="#" data-page="contratos">
+					<i class='bx bxs-file-doc bx-sm' ></i>
+					<span class="text">Contratos</span>
 				</a>
 			</li>
 			<li>
@@ -387,9 +387,172 @@
 						</ul>
 					</div>
 				</div>
-				<div class="empty-state">
-					<i class='bx bxs-file-doc'></i>
-					<p>Em breve, a tela de contratos detalhada.</p>
+
+				<!-- Summary Cards -->
+				<div class="contratos-summary-grid">
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon blue">
+							<i class='bx bxs-file-doc'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="contratosResumoTotal">0</strong>
+							<span>Total de contratos</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon green">
+							<i class='bx bxs-check-circle'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="contratosResumoAtivos">0</strong>
+							<span>Ativos</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon yellow">
+							<i class='bx bxs-error'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="contratosResumoSuspensos">0</strong>
+							<span>Suspensos</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon grey">
+							<i class='bx bxs-x-circle'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="contratosResumoEncerrados">0</strong>
+							<span>Encerrados</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Contratos Table Card -->
+				<div class="contratos-card">
+					<div class="head">
+						<h3>Contratos cadastrados</h3>
+						<div class="contratos-actions">
+							<button class="btn-primary" id="abrirCadastroContrato">
+								<i class='bx bx-plus'></i> Novo contrato
+							</button>
+						</div>
+					</div>
+
+					<div class="contratos-filters">
+						<div>
+							<label for="contratosFilterStatus">Status</label>
+							<select id="contratosFilterStatus">
+								<option value="">Todos</option>
+								<option value="ativo">Ativo</option>
+								<option value="suspenso">Suspenso</option>
+								<option value="encerrado">Encerrado</option>
+								<option value="cancelado">Cancelado</option>
+							</select>
+						</div>
+						<div>
+							<label for="contratosFilterEdital">Edital</label>
+							<select id="contratosFilterEdital">
+								<option value="">Todos</option>
+							</select>
+						</div>
+						<div>
+							<label for="contratosFilterBusca">Buscar</label>
+							<input id="contratosFilterBusca" type="text" placeholder="Numero, orgao, responsavel...">
+						</div>
+					</div>
+
+					<table class="contratos-table">
+						<thead>
+							<tr>
+								<th>Contrato</th>
+								<th>Edital</th>
+								<th>Orgao</th>
+								<th>Periodo</th>
+								<th>Valor</th>
+								<th>Status</th>
+								<th>Acoes</th>
+							</tr>
+						</thead>
+						<tbody id="contratosPageTableBody">
+							<tr>
+								<td colspan="7">Carregando contratos...</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<!-- Modal de Contrato -->
+				<div class="modal" id="contratoModal" aria-hidden="true">
+					<div class="modal-content modal-lg">
+						<div class="modal-header">
+							<h3 id="contratoModalTitulo">Cadastro de contrato</h3>
+							<button class="modal-close" type="button" id="fecharCadastroContrato">&times;</button>
+						</div>
+						<p>Cadastre contratos vinculados a editais de licitacao.</p>
+						<form id="contratoForm" class="contrato-form">
+							<input type="hidden" id="contratoId">
+
+							<div class="form-row">
+								<div class="form-group">
+									<label for="contratoEditalId">Edital vinculado *</label>
+									<select id="contratoEditalId" required>
+										<option value="">Selecione o edital</option>
+									</select>
+								</div>
+								<div class="form-group">
+									<label for="contratoNumero">Numero do contrato</label>
+									<input type="text" id="contratoNumero" placeholder="Ex: CT-001/2026">
+								</div>
+							</div>
+
+							<div class="form-group">
+								<label for="contratoObjeto">Objeto do contrato</label>
+								<textarea id="contratoObjeto" rows="3" placeholder="Descreva o objeto do contrato..."></textarea>
+							</div>
+
+							<div class="form-row">
+								<div class="form-group">
+									<label for="contratoValor">Valor (R$)</label>
+									<input type="number" id="contratoValor" step="0.01" min="0" placeholder="0,00">
+								</div>
+								<div class="form-group">
+									<label for="contratoResponsavel">Responsavel</label>
+									<input type="text" id="contratoResponsavel" placeholder="Nome do responsavel">
+								</div>
+							</div>
+
+							<div class="form-row">
+								<div class="form-group">
+									<label for="contratoDataInicio">Data inicio *</label>
+									<input type="date" id="contratoDataInicio" required>
+								</div>
+								<div class="form-group">
+									<label for="contratoDataFim">Data fim *</label>
+									<input type="date" id="contratoDataFim" required>
+								</div>
+								<div class="form-group">
+									<label for="contratoStatus">Status</label>
+									<select id="contratoStatus">
+										<option value="ativo">Ativo</option>
+										<option value="suspenso">Suspenso</option>
+										<option value="encerrado">Encerrado</option>
+										<option value="cancelado">Cancelado</option>
+									</select>
+								</div>
+							</div>
+
+							<div class="form-group">
+								<label for="contratoObservacoes">Observacoes</label>
+								<textarea id="contratoObservacoes" rows="2" placeholder="Observacoes adicionais..."></textarea>
+							</div>
+
+							<div class="form-actions">
+								<button type="button" class="btn-secondary" id="cancelarContrato">Cancelar</button>
+								<button type="submit" class="btn-primary">Salvar contrato</button>
+							</div>
+						</form>
+					</div>
 				</div>
 			</section>
 
