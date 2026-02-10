@@ -55,6 +55,10 @@ db.serialize(() => {
   ensureColumn('editais', 'objeto', 'TEXT');
   ensureColumn('editais', 'resumo', 'TEXT');
   ensureColumn('editais', 'pdfNome', 'TEXT');
+  ensureColumn('editais', 'status', 'TEXT');
+  ensureColumn('editais', 'pncpNumeroControle', 'TEXT');
+  ensureColumn('editais', 'pncpDataAtualizacao', 'TEXT');
+  ensureColumn('editais', 'linkSistemaOrigem', 'TEXT');
 
   // Tabela de Requisitos
   db.run(`
@@ -142,6 +146,7 @@ db.serialize(() => {
   ensureColumn('medicos', 'uf', 'TEXT');
   ensureColumn('medicos', 'municipio', 'TEXT');
   ensureColumn('medicos', 'status', 'TEXT');
+  ensureColumn('medicos', 'foto', 'TEXT');
 
   // Tabela de Plantões
   db.run(`
@@ -154,6 +159,8 @@ db.serialize(() => {
       FOREIGN KEY (medicoId) REFERENCES medicos(id)
     )
   `);
+
+  ensureColumn('plantoes', 'contratoId', 'INTEGER');
 
   // Tabela de Atendimentos
   db.run(`

@@ -72,6 +72,17 @@ class Medico {
       });
     });
   }
+
+  // Atualizar foto do médico
+  static atualizarFoto(id, foto) {
+    return new Promise((resolve, reject) => {
+      const sql = 'UPDATE medicos SET foto = ? WHERE id = ?';
+      db.run(sql, [foto, id], function(err) {
+        if (err) reject(err);
+        else resolve({ id, foto });
+      });
+    });
+  }
 }
 
 module.exports = Medico;

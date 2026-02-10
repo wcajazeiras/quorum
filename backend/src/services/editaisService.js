@@ -48,6 +48,9 @@ class EditaisService {
       objeto,
       resumo,
       pdfNome,
+      status,
+      pncpNumeroControle,
+      linkSistemaOrigem,
       requisitos,
       anexos,
       tarefas
@@ -68,7 +71,7 @@ class EditaisService {
     }
 
     try {
-      const edital = await Edital.criar(numero, orgao, tipoOrgao, estado, municipio, vigencia, objeto, resumo, pdfNome);
+      const edital = await Edital.criar(numero, orgao, tipoOrgao, estado, municipio, vigencia, objeto, resumo, pdfNome, status, pncpNumeroControle, linkSistemaOrigem);
 
       if (Array.isArray(requisitos)) {
         for (const requisito of requisitos) {
@@ -144,6 +147,30 @@ class EditaisService {
       return { mensagem: 'Edital removido com sucesso' };
     } catch (erro) {
       throw new Error(`Erro ao deletar edital: ${erro.message}`);
+    }
+  }
+
+  // Atualizar edital
+  async atualizarEdital(id, dados) {
+    if (!id) throw new Error('ID do edital é obrigatório');
+    if (!dados || !dados.numero || !dados.orgao) throw new Error('Número e órgão são obrigatórios');
+    try {
+      const edital = await Edital.atualizar(
+        id,
+        dados.numero,
+        dados.orgao,
+        dados.tipoOrgao || 'Município',
+        dados.estado || null,
+        dados.municipio || null,
+        dados.vigencia || '',
+        dados.objeto || null,
+        dados.resumo || null,
+        dados.pdfNome || null,
+        dados.status || 'aberto'
+      );
+      return edital;
+    } catch (erro) {
+      throw new Error(`Erro ao atualizar edital: ${erro.message}`);
     }
   }
 }

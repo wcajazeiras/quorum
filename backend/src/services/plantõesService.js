@@ -5,7 +5,7 @@ const Plantao = require('../models/Plantao');
 
 class PlantõesService {
   // Criar plantão com validações
-  async criarPlantao(medicoId, data, cargaHoraria) {
+  async criarPlantao(medicoId, data, cargaHoraria, contratoId) {
     // Validar campos obrigatórios
     if (!medicoId || !data || !cargaHoraria) {
       throw new Error('Médico, data e carga horária são obrigatórios');
@@ -17,7 +17,7 @@ class PlantõesService {
     }
 
     try {
-      const plantao = await Plantao.criar(medicoId, data, cargaHoraria);
+      const plantao = await Plantao.criar(medicoId, data, cargaHoraria, contratoId);
       return plantao;
     } catch (erro) {
       throw new Error(`Erro ao criar plantão: ${erro.message}`);
@@ -45,7 +45,7 @@ class PlantõesService {
   }
 
   // Atualizar plantão
-  async atualizarPlantao(id, medicoId, data, cargaHoraria) {
+  async atualizarPlantao(id, medicoId, data, cargaHoraria, contratoId) {
     if (!id) {
       throw new Error('ID do plantao e obrigatorio');
     }
@@ -59,7 +59,7 @@ class PlantõesService {
     }
 
     try {
-      const plantao = await Plantao.atualizar(id, medicoId, data, cargaHoraria);
+      const plantao = await Plantao.atualizar(id, medicoId, data, cargaHoraria, contratoId);
       return plantao;
     } catch (erro) {
       throw new Error(`Erro ao atualizar plantao: ${erro.message}`);

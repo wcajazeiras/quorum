@@ -4,7 +4,6 @@ const allSideMenuItems = document.querySelectorAll('#sidebar .side-menu.top li a
 const pages = document.querySelectorAll('#content main .page');
 
 function setActivePage(pageKey) {
-    const normalizedKey = pageKey === 'editais-novo' ? 'editais' : pageKey;
     pages.forEach(page => {
         const isActive = page.dataset.page === pageKey;
         page.classList.toggle('active', isActive);
@@ -12,7 +11,7 @@ function setActivePage(pageKey) {
 
     allSideMenuItems.forEach(item => {
         const itemKey = item.dataset.page;
-        const isActive = itemKey === normalizedKey;
+        const isActive = itemKey === pageKey;
         item.parentElement.classList.toggle('active', isActive);
     });
 }
@@ -172,7 +171,7 @@ const contratosPageTableBody = document.getElementById('contratosPageTableBody')
 const contratosTableBody = document.getElementById('contratosTableBody'); // dashboard table
 
 function formatDate(value) {
-    if (!value) return 'Nao informado';
+    if (!value) return 'Não informado';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
     return date.toLocaleDateString('pt-BR');
@@ -185,7 +184,7 @@ function formatCurrency(value) {
 
 function getContratoStatusMeta(status) {
     const normalized = String(status || '').toLowerCase();
-    if (normalized === 'ativo') return { label: 'Ativo', css: 'completed', color: '#27ae60' };
+    if (normalized === 'ativo') return { label: 'Ativo', css: 'active', color: '#27ae60' };
     if (normalized === 'encerrado') return { label: 'Encerrado', css: 'process', color: '#888' };
     if (normalized === 'suspenso') return { label: 'Suspenso', css: 'pending', color: '#f39c12' };
     if (normalized === 'cancelado') return { label: 'Cancelado', css: 'pending', color: '#e74c3c' };
@@ -199,7 +198,7 @@ function getBadgeText(rawLabel) {
 
 function getStatusMeta(status) {
     const normalized = String(status || '').toLowerCase();
-    if (normalized === 'ativo') return { label: 'Ativo', css: 'completed', color: '3C91E6' };
+    if (normalized === 'ativo') return { label: 'Ativo', css: 'active', color: '27ae60' };
     if (normalized === 'encerrado') return { label: 'Encerrado', css: 'completed', color: '3C91E6' };
     if (normalized === 'suspenso') return { label: 'Suspenso', css: 'pending', color: 'FFCE26' };
     if (normalized === 'cancelado') return { label: 'Cancelado', css: 'pending', color: 'FFCE26' };
@@ -242,10 +241,10 @@ function buildContratoRow(contrato) {
     const contratoBadge = getBadgeText(contrato.numero || contrato.id);
     const contratoImage = `https://placehold.co/36x36/${statusMeta.color}/FFFFFF?text=${encodeURIComponent(contratoBadge)}`;
     const periodo = `${formatDate(contrato.dataInicio)} - ${formatDate(contrato.dataFim)}`;
-    const orgao = contrato.orgao || 'Nao informado';
+    const orgao = contrato.orgao || 'Não informado';
     const municipio = contrato.editalMunicipio || '';
     const estado = contrato.editalEstado || '';
-    const localidade = municipio && estado ? `${municipio} - ${estado}` : (municipio || estado || 'Nao informado');
+    const localidade = municipio && estado ? `${municipio} - ${estado}` : (municipio || estado || 'Não informado');
 
     const row = document.createElement('tr');
 
@@ -419,7 +418,7 @@ function openContratoModal(contrato = null) {
         document.getElementById('contratoEditalId').value = contrato.editalId;
         document.getElementById('contratoNumero').value = contrato.numero || '';
         document.getElementById('contratoObjeto').value = contrato.objeto || '';
-        document.getElementById('contratoValor').value = contrato.valor || '';
+        document.getElementById('contratoValor').value = numberToCurrency(contrato.valor);
         document.getElementById('contratoResponsavel').value = contrato.responsavel || '';
         document.getElementById('contratoDataInicio').value = contrato.dataInicio || '';
         document.getElementById('contratoDataFim').value = contrato.dataFim || '';
@@ -439,6 +438,29 @@ function closeContratoModal() {
     contratoModal.setAttribute('aria-hidden', 'true');
 }
 
+// Mascara de moeda brasileira
+function maskCurrency(input) {
+    let v = input.value.replace(/\D/g, '');
+    if (!v) { input.value = ''; return; }
+    v = (parseInt(v, 10) / 100).toFixed(2);
+    v = v.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    input.value = v;
+}
+
+function parseCurrencyToNumber(str) {
+    if (!str) return null;
+    return parseFloat(str.replace(/\./g, '').replace(',', '.')) || null;
+}
+
+function numberToCurrency(num) {
+    if (!num && num !== 0) return '';
+    return Number(num).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+document.getElementById('contratoValor')?.addEventListener('input', function () {
+    maskCurrency(this);
+});
+
 // Event listeners
 document.getElementById('abrirCadastroContrato')?.addEventListener('click', () => openContratoModal());
 document.getElementById('fecharCadastroContrato')?.addEventListener('click', closeContratoModal);
@@ -456,7 +478,7 @@ contratoForm?.addEventListener('submit', async function (e) {
         editalId: document.getElementById('contratoEditalId').value,
         numero: document.getElementById('contratoNumero').value,
         objeto: document.getElementById('contratoObjeto').value,
-        valor: document.getElementById('contratoValor').value || null,
+        valor: parseCurrencyToNumber(document.getElementById('contratoValor').value),
         responsavel: document.getElementById('contratoResponsavel').value,
         dataInicio: document.getElementById('contratoDataInicio').value,
         dataFim: document.getElementById('contratoDataFim').value,
@@ -529,14 +551,13 @@ todoItems.forEach(item => {
     });
 });
 
-// ========== EDITAIS (UPLOAD) ==========
+// ========== EDITAIS (CRUD) ==========
+const editalForm = document.getElementById('editalForm');
+const editalModal = document.getElementById('editalModal');
+const editaisTableBody = document.getElementById('editaisTableBody');
 const editalPdfInput = document.getElementById('editalPdfInput');
 const editalPdfName = document.getElementById('editalPdfName');
 const analisarEditalBtn = document.getElementById('analisarEditalBtn');
-const editalRequirements = document.getElementById('editalRequirements');
-const editalAnexos = document.getElementById('editalAnexos');
-const salvarEditalBtn = document.getElementById('salvarEditalBtn');
-
 const editalNumero = document.getElementById('editalNumero');
 const editalOrgao = document.getElementById('editalOrgao');
 const editalTipoOrgao = document.getElementById('editalTipoOrgao');
@@ -545,84 +566,163 @@ const editalMunicipio = document.getElementById('editalMunicipio');
 const editalVigencia = document.getElementById('editalVigencia');
 const editalObjeto = document.getElementById('editalObjeto');
 const editalResumo = document.getElementById('editalResumo');
+const editalStatus = document.getElementById('editalStatus');
+const abrirCadastroEditalBtn = document.getElementById('abrirCadastroEdital');
+const fecharCadastroEditalBtn = document.getElementById('fecharCadastroEdital');
+const editalModalTitle = editalModal ? editalModal.querySelector('.modal-header h3') : null;
+const editalModalSubmit = editalForm ? editalForm.querySelector('button[type="submit"]') : null;
 
-let parsedEdital = null;
+let editaisFullCache = [];
+let editingEditalId = null;
 
-const annexLinks = [
-    {
-        titulo: 'Anexo II - Modelo de Requerimento de Credenciamento',
-        url: 'https://arquivos.licitardigital.com.br/2af7f023-4dcb-4c67-a21f-a864fa0c8e10.pdf'
-    },
-    {
-        titulo: 'Anexo III - Formulario de Cadastro de Inscricao',
-        url: 'https://arquivos.licitardigital.com.br/9848a2e2-15fb-4630-bf74-e3dd984b9aa7.pdf'
-    },
-    {
-        titulo: 'Anexo IV - Declaracao de nao emprego de menor',
-        url: 'https://arquivos.licitardigital.com.br/c216b6ec-8e0b-49c0-a137-e4813237b23a.pdf'
-    },
-    {
-        titulo: 'Anexo V - Declaracao de aceitacao do preco',
-        url: 'https://arquivos.licitardigital.com.br/aea7131e-1d6c-4f06-b9f3-8e68cd9c308c.pdf'
-    },
-    {
-        titulo: 'Anexo VI - Declaracao de inexistencia de vinculo',
-        url: 'https://arquivos.licitardigital.com.br/a15aff47-61c7-4df8-8267-31917f4d42c9.pdf'
-    },
-    {
-        titulo: 'Anexo VII - Modelo de Proposta de Precos',
-        url: 'https://arquivos.licitardigital.com.br/8b3f413b-fdb0-4ed4-9986-bdbb5ff6c3d2.pdf'
-    }
-];
-
-function renderEditalRequirements(items) {
-    if (!editalRequirements) return;
-
-    editalRequirements.innerHTML = '';
-    items.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item;
-        editalRequirements.appendChild(li);
-    });
+function getEditalStatusMeta(status) {
+    const n = String(status || '').toLowerCase();
+    if (n === 'aberto') return { label: 'Aberto', css: 'active' };
+    if (n === 'em_analise' || n === 'em análise') return { label: 'Em análise', css: 'process' };
+    if (n === 'adjudicado') return { label: 'Adjudicado', css: 'completed' };
+    if (n === 'encerrado') return { label: 'Encerrado', css: 'pending' };
+    if (n === 'cancelado') return { label: 'Cancelado', css: 'pending' };
+    return { label: status || 'Aberto', css: 'active' };
 }
 
-function renderAnexos(items) {
-    if (!editalAnexos) return;
-    editalAnexos.innerHTML = '';
+function formatEditalLocal(edital) {
+    const mun = edital.municipio || '';
+    const uf = edital.estado || '';
+    if (mun && uf) return `${mun} - ${uf}`;
+    return mun || uf || '-';
+}
 
+function buildEditalRow(edital) {
+    const row = document.createElement('tr');
+    const sm = getEditalStatusMeta(edital.status);
+    let pncpTag = '';
+    if (edital.pncpNumeroControle) {
+        // numeroControlePNCP formato: "18291351000164-1-000329/2025"
+        // URL correta: /app/editais/{cnpj}/{ano}/{sequencial}
+        const m = edital.pncpNumeroControle.match(/^(\d+)-\d+-0*(\d+)\/(\d+)$/);
+        const pncpUrl = m
+            ? `https://pncp.gov.br/app/editais/${m[1]}/${m[3]}/${m[2]}`
+            : `https://pncp.gov.br/app/editais`;
+        pncpTag = ` <a href="${pncpUrl}" target="_blank" rel="noopener" class="pncp-badge-importado" style="font-size:10px;text-decoration:none;" title="Ver no portal PNCP"><i class="bx bxs-cloud-download"></i> PNCP</a>`;
+    }
+
+    row.innerHTML = `
+        <td>${edital.numero || '-'}${pncpTag}</td>
+        <td>${edital.orgao || '-'}</td>
+        <td>${formatEditalLocal(edital)}</td>
+        <td>${edital.vigencia || '-'}</td>
+        <td><span class="status ${sm.css}">${sm.label}</span></td>
+        <td>
+            <div class="actions">
+                <button class="btn-icon" data-action="view" data-id="${edital.id}" title="Visualizar">
+                    <i class='bx bxs-show'></i>
+                </button>
+                <button class="btn-icon" data-action="edit" data-id="${edital.id}" title="Editar">
+                    <i class='bx bxs-edit'></i>
+                </button>
+                <button class="btn-icon danger" data-action="delete" data-id="${edital.id}" title="Excluir">
+                    <i class='bx bxs-trash'></i>
+                </button>
+            </div>
+        </td>
+    `;
+    return row;
+}
+
+function renderEditaisTable(items) {
+    if (!editaisTableBody) return;
     if (!items || items.length === 0) {
-        editalAnexos.innerHTML = '<tr><td colspan="3">Nenhum anexo identificado.</td></tr>';
+        editaisTableBody.innerHTML = '<tr><td colspan="6">Nenhum edital cadastrado.</td></tr>';
         return;
     }
+    editaisTableBody.innerHTML = '';
+    items.forEach(e => editaisTableBody.appendChild(buildEditalRow(e)));
+}
 
-    items.forEach(item => {
-        const fieldsCount = item.schema && Array.isArray(item.schema.fields) ? item.schema.fields.length : 0;
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${item.titulo}</td>
-            <td>${item.fonte}</td>
-            <td>${fieldsCount}</td>
-        `;
-        editalAnexos.appendChild(row);
+function updateEditaisSummary(items) {
+    const total = items.length;
+    const abertos = items.filter(e => (e.status || 'aberto') === 'aberto').length;
+    const analise = items.filter(e => e.status === 'em_analise').length;
+    const encerrados = items.filter(e => e.status === 'encerrado' || e.status === 'cancelado').length;
+    const el = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    el('editaisResumoTotal', total);
+    el('editaisResumoAbertos', abertos);
+    el('editaisResumoAnalise', analise);
+    el('editaisResumoEncerrados', encerrados);
+}
+
+function applyEditaisFilters() {
+    const statusFilter = document.getElementById('editaisFilterStatus')?.value || '';
+    const buscaFilter = (document.getElementById('editaisFilterBusca')?.value || '').toLowerCase();
+
+    const filtered = editaisFullCache.filter(e => {
+        if (statusFilter && (e.status || 'aberto') !== statusFilter) return false;
+        if (buscaFilter) {
+            const searchable = [e.numero, e.orgao, e.objeto, e.municipio, e.estado].join(' ').toLowerCase();
+            if (!searchable.includes(buscaFilter)) return false;
+        }
+        return true;
     });
+    renderEditaisTable(filtered);
 }
 
-function fillEditalForm(data) {
-    if (!data) return;
-    if (editalNumero) editalNumero.value = data.numero || '';
-    if (editalOrgao) editalOrgao.value = data.orgao || '';
-    if (editalVigencia) editalVigencia.value = data.vigencia || '';
-    if (editalObjeto) editalObjeto.value = data.objeto || '';
-    if (editalResumo) editalResumo.value = data.resumo || '';
-    if (editalTipoOrgao && data.tipoOrgao) editalTipoOrgao.value = data.tipoOrgao;
-    if (editalEstado && data.estado) editalEstado.value = data.estado;
-    if (editalMunicipio && data.municipio) editalMunicipio.value = data.municipio;
+async function loadEditais() {
+    if (!editaisTableBody) return;
+    editaisTableBody.innerHTML = '<tr><td colspan="6">Carregando editais...</td></tr>';
+    try {
+        const response = await fetch('/api/editais');
+        if (!response.ok) throw new Error('Falha ao carregar editais');
+        const editais = await response.json();
+        editaisFullCache = Array.isArray(editais) ? editais : [];
+        // Also update the editaisCache used by contratos
+        editaisCache = editaisFullCache;
+        updateEditaisSummary(editaisFullCache);
+        applyEditaisFilters();
+    } catch (error) {
+        editaisTableBody.innerHTML = '<tr><td colspan="6">Erro ao carregar editais.</td></tr>';
+        console.error(error);
+    }
 }
 
+function openEditalModal(edital = null) {
+    if (!editalForm || !editalModal) return;
+    if (edital) {
+        editingEditalId = edital.id;
+        if (editalModalTitle) editalModalTitle.textContent = 'Editar edital';
+        if (editalModalSubmit) editalModalSubmit.textContent = 'Atualizar edital';
+        if (editalNumero) editalNumero.value = edital.numero || '';
+        if (editalOrgao) editalOrgao.value = edital.orgao || '';
+        if (editalTipoOrgao) editalTipoOrgao.value = edital.tipoOrgao || 'Município';
+        if (editalEstado) editalEstado.value = edital.estado || '';
+        if (editalMunicipio) editalMunicipio.value = edital.municipio || '';
+        if (editalVigencia) editalVigencia.value = edital.vigencia || '';
+        if (editalObjeto) editalObjeto.value = edital.objeto || '';
+        if (editalResumo) editalResumo.value = edital.resumo || '';
+        if (editalStatus) editalStatus.value = edital.status || 'aberto';
+    } else {
+        editingEditalId = null;
+        editalForm.reset();
+        if (editalStatus) editalStatus.value = 'aberto';
+        if (editalModalTitle) editalModalTitle.textContent = 'Cadastro de edital';
+        if (editalModalSubmit) editalModalSubmit.textContent = 'Salvar edital';
+    }
+    if (editalPdfName) editalPdfName.textContent = 'Importar PDF do edital';
+    if (editalPdfInput) editalPdfInput.value = '';
+    editalModal.classList.add('show');
+    editalModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeEditalModal() {
+    if (!editalModal) return;
+    editalModal.classList.remove('show');
+    editalModal.setAttribute('aria-hidden', 'true');
+}
+
+// PDF upload + AI fill
 if (editalPdfInput && editalPdfName) {
     editalPdfInput.addEventListener('change', () => {
         const file = editalPdfInput.files && editalPdfInput.files[0];
-        editalPdfName.textContent = file ? file.name : 'Nenhum arquivo selecionado';
+        editalPdfName.textContent = file ? file.name : 'Importar PDF do edital';
     });
 }
 
@@ -630,73 +730,217 @@ if (analisarEditalBtn) {
     analisarEditalBtn.addEventListener('click', async () => {
         const file = editalPdfInput && editalPdfInput.files ? editalPdfInput.files[0] : null;
         if (!file) {
-            renderEditalRequirements(['Selecione um PDF para iniciar a analise.']);
+            alert('Selecione um PDF para analisar.');
             return;
         }
-
+        analisarEditalBtn.disabled = true;
+        analisarEditalBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Analisando...';
         const formData = new FormData();
         formData.append('editalPdf', file);
-        formData.append('annexLinks', JSON.stringify(annexLinks));
-
         try {
-            const response = await fetch('/api/editais/analisar', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error('Falha ao analisar edital');
-            }
-
-            parsedEdital = await response.json();
-            renderEditalRequirements(parsedEdital.requisitos || []);
-            renderAnexos(parsedEdital.anexos || []);
-            fillEditalForm(parsedEdital);
-        } catch (error) {
-            console.error(error);
-            renderEditalRequirements(['Falha ao analisar o PDF.']);
+            const response = await fetch('/api/editais/analisar', { method: 'POST', body: formData });
+            if (!response.ok) throw new Error('Falha ao analisar');
+            const data = await response.json();
+            // Fill form fields from AI result
+            if (editalNumero && data.numero) editalNumero.value = data.numero;
+            if (editalOrgao && data.orgao) editalOrgao.value = data.orgao;
+            if (editalTipoOrgao && data.tipoOrgao) editalTipoOrgao.value = data.tipoOrgao;
+            if (editalEstado && data.estado) editalEstado.value = data.estado;
+            if (editalMunicipio && data.municipio) editalMunicipio.value = data.municipio;
+            if (editalVigencia && data.vigencia) editalVigencia.value = data.vigencia;
+            if (editalObjeto && data.objeto) editalObjeto.value = data.objeto;
+            if (editalResumo && data.resumo) editalResumo.value = data.resumo;
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao analisar PDF.');
+        } finally {
+            analisarEditalBtn.disabled = false;
+            analisarEditalBtn.innerHTML = '<i class="bx bxs-analyse"></i> Analisar PDF';
         }
     });
 }
 
-if (salvarEditalBtn) {
-    salvarEditalBtn.addEventListener('click', async () => {
-        if (!parsedEdital) {
-            alert('Analise o PDF antes de salvar.');
-            return;
-        }
-
+// Form submit
+if (editalForm) {
+    editalForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
         const payload = {
             numero: editalNumero ? editalNumero.value.trim() : '',
             orgao: editalOrgao ? editalOrgao.value.trim() : '',
-            tipoOrgao: editalTipoOrgao ? editalTipoOrgao.value : 'Municipio',
-            estado: editalEstado ? editalEstado.value.trim() : '',
+            tipoOrgao: editalTipoOrgao ? editalTipoOrgao.value : 'Município',
+            estado: editalEstado ? editalEstado.value.trim().toUpperCase() : '',
             municipio: editalMunicipio ? editalMunicipio.value.trim() : '',
             vigencia: editalVigencia ? editalVigencia.value.trim() : '',
             objeto: editalObjeto ? editalObjeto.value.trim() : '',
             resumo: editalResumo ? editalResumo.value.trim() : '',
-            pdfNome: parsedEdital.pdfNome || '',
-            requisitos: (parsedEdital.requisitos || []).map(texto => ({ texto })),
-            anexos: parsedEdital.anexos || [],
-            tarefas: parsedEdital.tarefas || []
+            status: editalStatus ? editalStatus.value : 'aberto'
         };
-
         try {
-            const response = await fetch('/api/editais', {
-                method: 'POST',
+            const endpoint = editingEditalId ? `/api/editais/${editingEditalId}` : '/api/editais';
+            const method = editingEditalId ? 'PUT' : 'POST';
+            const response = await fetch(endpoint, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-
-            if (!response.ok) {
-                const erro = await response.json();
-                throw new Error(erro.erro || 'Falha ao salvar edital');
-            }
-
-            alert('Edital salvo com sucesso.');
+            if (!response.ok) throw new Error('Falha ao salvar edital');
+            editalForm.reset();
+            editingEditalId = null;
+            closeEditalModal();
+            await loadEditais();
+            // Refresh contratos edital selects
+            await loadEditaisForSelect();
         } catch (error) {
             console.error(error);
             alert('Erro ao salvar edital.');
+        }
+    });
+}
+
+// Open/close modal
+if (abrirCadastroEditalBtn) {
+    abrirCadastroEditalBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        openEditalModal();
+    });
+}
+
+if (fecharCadastroEditalBtn) {
+    fecharCadastroEditalBtn.addEventListener('click', () => closeEditalModal());
+}
+
+if (editalModal) {
+    editalModal.addEventListener('click', (e) => {
+        if (e.target === editalModal) closeEditalModal();
+    });
+}
+
+// ── Edital View Modal ──
+const editalViewModal = document.getElementById('editalViewModal');
+const editalViewConteudo = document.getElementById('editalViewConteudo');
+let editalViewAtual = null;
+
+function openEditalViewModal(edital) {
+    editalViewAtual = edital;
+    if (!editalViewModal || !editalViewConteudo) return;
+    const sm = getEditalStatusMeta(edital.status);
+    const local = formatEditalLocal(edital);
+    const tipoOrgaoMap = { 'Município': 'Município', 'Municipio': 'Município', 'Estado': 'Estado', 'Federal': 'Federal' };
+    const tipoOrgao = tipoOrgaoMap[edital.tipoOrgao] || edital.tipoOrgao || '-';
+
+    let pncpLink = '';
+    if (edital.pncpNumeroControle) {
+        const m = edital.pncpNumeroControle.match(/^(\d+)-\d+-0*(\d+)\/(\d+)$/);
+        const pncpUrl = m
+            ? `https://pncp.gov.br/app/editais/${m[1]}/${m[3]}/${m[2]}`
+            : `https://pncp.gov.br/app/editais`;
+        pncpLink = `<a href="${pncpUrl}" target="_blank" rel="noopener" class="pncp-badge-importado" style="font-size:12px;text-decoration:none;"><i class="bx bxs-cloud-download"></i> Ver no PNCP</a>`;
+    }
+
+    editalViewConteudo.innerHTML = `
+        <div class="edital-view-grid">
+            <div class="edital-view-item">
+                <span class="edital-view-label">Número</span>
+                <span class="edital-view-value">${edital.numero || '-'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Status</span>
+                <span class="edital-view-value"><span class="status ${sm.css}">${sm.label}</span></span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Órgão</span>
+                <span class="edital-view-value">${edital.orgao || '-'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Tipo de órgão</span>
+                <span class="edital-view-value">${tipoOrgao}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">UF / Município</span>
+                <span class="edital-view-value">${local || '-'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Vigência</span>
+                <span class="edital-view-value">${edital.vigencia || '-'}</span>
+            </div>
+            <div class="edital-view-item full">
+                <span class="edital-view-label">Objeto</span>
+                <span class="edital-view-value">${edital.objeto || '-'}</span>
+            </div>
+            <div class="edital-view-item full">
+                <span class="edital-view-label">Resumo / Observações</span>
+                <span class="edital-view-value">${edital.resumo || '-'}</span>
+            </div>
+            <div class="edital-view-item full">
+                <span class="edital-view-label">Links</span>
+                <span class="edital-view-value edital-view-links">
+                    ${pncpLink ? `<span>${pncpLink}</span>` : ''}
+                    ${edital.linkSistemaOrigem ? `<a href="${edital.linkSistemaOrigem}" target="_blank" rel="noopener" class="sistema-origem-badge" style="font-size:12px;text-decoration:none;"><i class='bx bx-link-external'></i> Sistema de Origem</a>` : ''}
+                    ${!pncpLink && !edital.linkSistemaOrigem ? '-' : ''}
+                </span>
+            </div>
+            ${edital.pdfNome ? `<div class="edital-view-item full">
+                <span class="edital-view-label">PDF anexado</span>
+                <span class="edital-view-value"><i class='bx bxs-file-pdf' style="color:#e74c3c;"></i> ${edital.pdfNome}</span>
+            </div>` : ''}
+        </div>
+    `;
+
+    editalViewModal.classList.add('show');
+    editalViewModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeEditalViewModal() {
+    if (!editalViewModal) return;
+    editalViewModal.classList.remove('show');
+    editalViewModal.setAttribute('aria-hidden', 'true');
+    editalViewAtual = null;
+}
+
+document.getElementById('fecharViewEdital')?.addEventListener('click', closeEditalViewModal);
+document.getElementById('editalViewFecharBtn')?.addEventListener('click', closeEditalViewModal);
+document.getElementById('editalViewEditarBtn')?.addEventListener('click', () => {
+    if (editalViewAtual) {
+        closeEditalViewModal();
+        openEditalModal(editalViewAtual);
+    }
+});
+if (editalViewModal) {
+    editalViewModal.addEventListener('click', (e) => {
+        if (e.target === editalViewModal) closeEditalViewModal();
+    });
+}
+
+// Filters
+document.getElementById('editaisFilterStatus')?.addEventListener('change', applyEditaisFilters);
+document.getElementById('editaisFilterBusca')?.addEventListener('input', applyEditaisFilters);
+
+// Table actions (view/edit/delete)
+if (editaisTableBody) {
+    editaisTableBody.addEventListener('click', async (e) => {
+        const button = e.target.closest('button[data-action]');
+        if (!button) return;
+        const action = button.dataset.action;
+        const id = button.dataset.id;
+        if (action === 'view') {
+            const edital = editaisFullCache.find(item => String(item.id) === String(id));
+            if (edital) openEditalViewModal(edital);
+        }
+        if (action === 'edit') {
+            const edital = editaisFullCache.find(item => String(item.id) === String(id));
+            if (edital) openEditalModal(edital);
+        }
+        if (action === 'delete') {
+            if (!confirm('Deseja excluir este edital?')) return;
+            try {
+                const response = await fetch(`/api/editais/${id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Falha ao excluir');
+                await loadEditais();
+                await loadEditaisForSelect();
+            } catch (err) {
+                console.error(err);
+                alert('Erro ao excluir edital.');
+            }
         }
     });
 }
@@ -712,6 +956,9 @@ const medicoEmail = document.getElementById('medicoEmail');
 const medicoUf = document.getElementById('medicoUf');
 const medicoCidade = document.getElementById('medicoCidade');
 const medicoStatus = document.getElementById('medicoStatus');
+const medicoFotoInput = document.getElementById('medicoFotoInput');
+const medicoFotoPreview = document.getElementById('medicoFotoPreview');
+let medicoFotoFile = null;
 const abrirCadastroMedico = document.getElementById('abrirCadastroMedico');
 const fecharCadastroMedico = document.getElementById('fecharCadastroMedico');
 const medicoModal = document.getElementById('medicoModal');
@@ -722,27 +969,85 @@ const medicosFilterStatus = document.getElementById('medicosFilterStatus');
 let medicosCache = [];
 let editingMedicoId = null;
 
+// Photo preview click and file change handlers
+if (medicoFotoPreview) {
+    medicoFotoPreview.addEventListener('click', () => {
+        if (medicoFotoInput) medicoFotoInput.click();
+    });
+}
+
+if (medicoFotoInput) {
+    medicoFotoInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        medicoFotoFile = file;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            if (medicoFotoPreview) {
+                medicoFotoPreview.innerHTML = '';
+                medicoFotoPreview.style.backgroundImage = `url('${ev.target.result}')`;
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function resetFotoPreview() {
+    medicoFotoFile = null;
+    if (medicoFotoInput) medicoFotoInput.value = '';
+    if (medicoFotoPreview) {
+        medicoFotoPreview.style.backgroundImage = '';
+        medicoFotoPreview.innerHTML = `<i class='bx bxs-camera'></i><span>Adicionar foto</span>`;
+    }
+}
+
+function setFotoPreview(url) {
+    if (medicoFotoPreview) {
+        medicoFotoPreview.innerHTML = '';
+        medicoFotoPreview.style.backgroundImage = `url('${url}')`;
+    }
+}
+
+async function uploadMedicoFoto(medicoId) {
+    if (!medicoFotoFile || !medicoId) return;
+    const formData = new FormData();
+    formData.append('foto', medicoFotoFile);
+    try {
+        await fetch(`/api/medicos/${medicoId}/foto`, { method: 'POST', body: formData });
+    } catch (err) {
+        console.error('Erro ao enviar foto:', err);
+    }
+    medicoFotoFile = null;
+}
+
 function formatMedicoLocal(medico) {
     const cidade = medico.municipio || '';
     const uf = medico.uf || '';
     if (cidade && uf) return `${cidade} - ${uf}`;
-    return cidade || uf || 'Nao informado';
+    return cidade || uf || 'Não informado';
 }
 
 function buildMedicoRow(medico) {
     const row = document.createElement('tr');
     const statusLabel = medico.status ? medico.status : 'ativo';
+    const avatarHtml = medico.foto
+        ? `<img src="${medico.foto}" class="medico-avatar" alt="">`
+        : `<span class="medico-avatar medico-avatar-placeholder"><i class='bx bxs-user'></i></span>`;
 
     row.innerHTML = `
-        <td>${medico.nome || ''}</td>
+        <td><div class="medico-nome-cell">${avatarHtml}<span>${medico.nome || ''}</span></div></td>
         <td>${medico.especialidade || ''}</td>
-        <td>${medico.crm || 'Nao informado'}</td>
+        <td>${medico.crm || 'Não informado'}</td>
         <td>${formatMedicoLocal(medico)}</td>
         <td>${statusLabel}</td>
         <td>
             <div class="actions">
-                <button class="btn-icon" data-action="edit" data-id="${medico.id}">Editar</button>
-                <button class="btn-icon danger" data-action="delete" data-id="${medico.id}">Excluir</button>
+                <button class="btn-icon" data-action="edit" data-id="${medico.id}" title="Editar">
+                    <i class='bx bxs-edit'></i>
+                </button>
+                <button class="btn-icon danger" data-action="delete" data-id="${medico.id}" title="Excluir">
+                    <i class='bx bxs-trash'></i>
+                </button>
             </div>
         </td>
     `;
@@ -753,7 +1058,7 @@ function buildMedicoRow(medico) {
 function renderMedicosTable(items) {
     if (!medicosTableBody) return;
     if (!items || items.length === 0) {
-        medicosTableBody.innerHTML = '<tr><td colspan="6">Nenhum medico cadastrado.</td></tr>';
+        medicosTableBody.innerHTML = '<tr><td colspan="6">Nenhum médico cadastrado.</td></tr>';
         return;
     }
 
@@ -791,12 +1096,12 @@ function applyMedicosFilters() {
 async function loadMedicos() {
     if (!medicosTableBody) return;
 
-    medicosTableBody.innerHTML = '<tr><td colspan="6">Carregando medicos...</td></tr>';
+    medicosTableBody.innerHTML = '<tr><td colspan="6">Carregando médicos...</td></tr>';
 
     try {
         const response = await fetch('/api/medicos');
         if (!response.ok) {
-            throw new Error('Falha ao carregar medicos');
+            throw new Error('Falha ao carregar médicos');
         }
 
         const medicos = await response.json();
@@ -804,7 +1109,7 @@ async function loadMedicos() {
         updateMedicosFilters(medicosCache);
         applyMedicosFilters();
     } catch (error) {
-        medicosTableBody.innerHTML = '<tr><td colspan="6">Erro ao carregar medicos.</td></tr>';
+        medicosTableBody.innerHTML = '<tr><td colspan="6">Erro ao carregar médicos.</td></tr>';
         console.error(error);
     }
 }
@@ -836,9 +1141,16 @@ function openMedicoModal(medico = null) {
         if (medicoUf) medicoUf.value = (medico.uf || '').toUpperCase();
         if (medicoCidade) medicoCidade.value = medico.municipio || '';
         if (medicoStatus) medicoStatus.value = medico.status || 'ativo';
+        // Show existing photo
+        if (medico.foto) {
+            setFotoPreview(medico.foto);
+        } else {
+            resetFotoPreview();
+        }
     } else {
         editingMedicoId = null;
         medicoForm.reset();
+        resetFotoPreview();
         if (medicoStatus) medicoStatus.value = 'ativo';
         if (medicoModalTitle) medicoModalTitle.textContent = 'Cadastro de medicos';
         if (medicoModalSubmit) medicoModalSubmit.textContent = 'Salvar medico';
@@ -881,7 +1193,16 @@ if (medicoForm) {
                 throw new Error('Falha ao salvar medico');
             }
 
+            const saved = await response.json();
+
+            // Upload photo if selected
+            const savedId = editingMedicoId || saved.id;
+            if (medicoFotoFile && savedId) {
+                await uploadMedicoFoto(savedId);
+            }
+
             medicoForm.reset();
+            resetFotoPreview();
             if (medicoStatus) {
                 medicoStatus.value = 'ativo';
             }
@@ -973,6 +1294,7 @@ const abrirCadastroPlantaoButtons = document.querySelectorAll('.abrir-cadastro-p
 const fecharCadastroPlantao = document.getElementById('fecharCadastroPlantao');
 const plantaoModal = document.getElementById('plantaoModal');
 const plantaoForm = document.getElementById('plantaoForm');
+const plantaoContrato = document.getElementById('plantaoContrato');
 const plantaoMedico = document.getElementById('plantaoMedico');
 const plantaoData = document.getElementById('plantaoData');
 const plantaoCargaHoraria = document.getElementById('plantaoCargaHoraria');
@@ -991,7 +1313,7 @@ function getPlantaoStatus(data) {
         return { label: 'Hoje', css: 'process', key: 'hoje' };
     }
     if (parsed.getTime() < today.getTime()) {
-        return { label: 'Concluido', css: 'completed', key: 'concluido' };
+        return { label: 'Concluído', css: 'completed', key: 'concluido' };
     }
     return { label: 'Agendado', css: 'pending', key: 'agendado' };
 }
@@ -1000,22 +1322,28 @@ function formatPlantaoLocal(plantao) {
     const cidade = plantao.municipio || '';
     const uf = plantao.uf || '';
     if (cidade && uf) return `${cidade} - ${uf}`;
-    return cidade || uf || 'Nao informado';
+    return cidade || uf || 'Não informado';
 }
 
 function buildPlantaoRow(plantao) {
     const row = document.createElement('tr');
     const statusMeta = getPlantaoStatus(plantao.data);
+    const contratoLabel = plantao.contratoNumero ? `#${plantao.contratoNumero}` : 'Não vinculado';
     row.innerHTML = `
+        <td>${contratoLabel}</td>
         <td>${formatDate(plantao.data)}</td>
-        <td>${plantao.nome || 'Nao informado'}</td>
-        <td>${plantao.especialidade || 'Nao informado'}</td>
+        <td>${plantao.nome || 'Não informado'}</td>
+        <td>${plantao.especialidade || 'Não informado'}</td>
         <td>${formatPlantaoLocal(plantao)}</td>
         <td><span class="status ${statusMeta.css}">${statusMeta.label}</span></td>
         <td>
             <div class="actions">
-                <button class="btn-icon" data-action="edit" data-id="${plantao.id}">Editar</button>
-                <button class="btn-icon danger" data-action="delete" data-id="${plantao.id}">Cancelar</button>
+                <button class="btn-icon" data-action="edit" data-id="${plantao.id}" title="Editar">
+                    <i class='bx bxs-edit'></i>
+                </button>
+                <button class="btn-icon danger" data-action="delete" data-id="${plantao.id}" title="Cancelar">
+                    <i class='bx bxs-trash'></i>
+                </button>
             </div>
         </td>
     `;
@@ -1025,7 +1353,7 @@ function buildPlantaoRow(plantao) {
 function renderPlantoesTable(items) {
     if (!plantoesTableBody) return;
     if (!items || items.length === 0) {
-        plantoesTableBody.innerHTML = '<tr><td colspan="6">Nenhum plantao cadastrado.</td></tr>';
+        plantoesTableBody.innerHTML = '<tr><td colspan="7">Nenhum plantão cadastrado.</td></tr>';
         return;
     }
 
@@ -1115,7 +1443,7 @@ function updatePlantoesResumo(items) {
 
 async function loadPlantoes() {
     if (!plantoesTableBody) return;
-    plantoesTableBody.innerHTML = '<tr><td colspan="6">Carregando plantões...</td></tr>';
+    plantoesTableBody.innerHTML = '<tr><td colspan="7">Carregando plantões...</td></tr>';
 
     try {
         const response = await fetch('/api/plantoes');
@@ -1128,8 +1456,25 @@ async function loadPlantoes() {
         updatePlantoesResumo(plantoesCache);
         applyPlantoesFilters();
     } catch (error) {
-        plantoesTableBody.innerHTML = '<tr><td colspan="6">Erro ao carregar plantões.</td></tr>';
+        plantoesTableBody.innerHTML = '<tr><td colspan="7">Erro ao carregar plantões.</td></tr>';
         console.error(error);
+    }
+}
+
+function syncPlantaoContratosOptions() {
+    if (!plantaoContrato) return;
+    const currentValue = plantaoContrato.value;
+    plantaoContrato.innerHTML = '<option value="">Selecione</option>';
+    contratosCache.forEach(contrato => {
+        const option = document.createElement('option');
+        option.value = contrato.id;
+        const num = contrato.numero ? `#${contrato.numero}` : `#${contrato.id}`;
+        const orgao = contrato.orgao || '';
+        option.textContent = orgao ? `${num} - ${orgao}` : num;
+        plantaoContrato.appendChild(option);
+    });
+    if (currentValue) {
+        plantaoContrato.value = currentValue;
     }
 }
 
@@ -1156,8 +1501,15 @@ function openPlantaoModal(plantao = null) {
         syncPlantaoMedicosOptions();
     }
 
+    if (contratosCache.length === 0) {
+        loadContratos().then(syncPlantaoContratosOptions).catch(() => {});
+    } else {
+        syncPlantaoContratosOptions();
+    }
+
     if (plantao) {
         editingPlantaoId = plantao.id;
+        if (plantaoContrato) plantaoContrato.value = plantao.contratoId || '';
         if (plantaoMedico) plantaoMedico.value = plantao.medicoId;
         if (plantaoData) plantaoData.value = String(plantao.data || '').slice(0, 10);
         if (plantaoCargaHoraria) plantaoCargaHoraria.value = plantao.cargaHoraria || '';
@@ -1203,6 +1555,7 @@ if (plantaoForm) {
     plantaoForm.addEventListener('submit', async event => {
         event.preventDefault();
         const payload = {
+            contratoId: plantaoContrato ? Number(plantaoContrato.value) || null : null,
             medicoId: plantaoMedico ? Number(plantaoMedico.value) : null,
             data: plantaoData ? plantaoData.value : '',
             cargaHoraria: plantaoCargaHoraria ? Number(plantaoCargaHoraria.value) : null
@@ -1274,10 +1627,683 @@ if (plantoesFilterPeriodo) {
     plantoesFilterPeriodo.addEventListener('input', applyPlantoesFilters);
 }
 
+// ========== PNCP - PORTAL NACIONAL DE CONTRATAÇÕES PÚBLICAS ==========
+const pncpFilterForm = document.getElementById('pncpFilterForm');
+const pncpTableBody = document.getElementById('pncpTableBody');
+const pncpResultadosCard = document.getElementById('pncpResultadosCard');
+const pncpPagination = document.getElementById('pncpPagination');
+const pncpBuscarBtn = document.getElementById('pncpBuscarBtn');
+const pncpLimparBtn = document.getElementById('pncpLimparBtn');
+const pncpImportarTodosBtn = document.getElementById('pncpImportarTodosBtn');
+const pncpDetalheModal = document.getElementById('pncpDetalheModal');
+const pncpDetalheConteudo = document.getElementById('pncpDetalheConteudo');
+const pncpImportarDetalheBtn = document.getElementById('pncpImportarDetalheBtn');
+
+let pncpCache = [];              // Results from current search
+let pncpCacheOriginal = [];      // Unsorted copy of results
+let pncpCurrentPage = 1;
+let pncpTotalPages = 0;
+let pncpTotalRegistros = 0;
+let pncpLastFilters = {};        // Last search params
+let pncpDetalheAtual = null;     // Currently viewed contratação detail
+
+// Map PNCP items to already-imported editais via pncpNumeroControle
+function getPncpImportedSet() {
+    const imported = new Set();
+    (editaisFullCache || []).forEach(e => {
+        if (e.pncpNumeroControle) imported.add(e.pncpNumeroControle);
+    });
+    return imported;
+}
+
+// Set default dates (last 30 days)
+function initPncpDates() {
+    const dataFinal = document.getElementById('pncpDataFinal');
+    const dataInicial = document.getElementById('pncpDataInicial');
+    if (dataFinal && !dataFinal.value) {
+        const today = new Date();
+        dataFinal.value = today.toISOString().split('T')[0];
+    }
+    if (dataInicial && !dataInicial.value) {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        dataInicial.value = d.toISOString().split('T')[0];
+    }
+}
+
+// Format currency BRL
+function formatPncpValor(v) {
+    if (v == null || v === '') return '-';
+    return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Format PNCP date
+function formatPncpDate(d) {
+    if (!d) return '-';
+    try {
+        return new Date(d).toLocaleDateString('pt-BR');
+    } catch { return d; }
+}
+
+// Get situação label
+function getSituacaoLabel(item) {
+    return item.situacaoCompraNome || '-';
+}
+
+// Get situação CSS
+function getSituacaoCss(item) {
+    const id = item.situacaoCompraId;
+    if (id === '1') return 'active';    // Divulgada
+    if (id === '2') return 'process';   // Ativa
+    if (id === '3') return 'pending';   // Suspensa
+    if (id === '4') return 'pending';   // Revogada/Anulada
+    return 'process';
+}
+
+// Get UF/Município from PNCP item
+function formatPncpLocal(item) {
+    const uf = item.unidadeOrgao?.ufSigla || '';
+    const mun = item.unidadeOrgao?.municipioNome || '';
+    if (mun && uf) return `${mun} - ${uf}`;
+    return mun || uf || '-';
+}
+
+// Keywords that indicate medical-related contratações
+const PNCP_MEDICO_KEYWORDS = /m[eé]dico|servi[cç]os?\s*m[eé]dic|m[aã]o[\s\-]*de[\s\-]*obra\s*m[eé]dic|sa[uú]de|hospitalar|plant[aã]o\s*m[eé]dic|atendimento\s*m[eé]dic|profissional\s*m[eé]dic|cl[ií]nic|ubs\b|upa\b|hospital|cirurgi|anestesi|emerg[eê]ncia\s*m[eé]dic/i;
+
+function isPncpMedico(item) {
+    const text = [
+        item.objetoCompra,
+        item.orgaoEntidade?.razaoSocial,
+        item.informacaoComplementar
+    ].filter(Boolean).join(' ');
+    return PNCP_MEDICO_KEYWORDS.test(text);
+}
+
+// Build table row for a PNCP result
+function buildPncpRow(item) {
+    const row = document.createElement('tr');
+    const imported = getPncpImportedSet();
+    const numCtrl = item.numeroControlePNCP || '';
+    const isImported = imported.has(numCtrl);
+    const isMedico = isPncpMedico(item);
+
+    if (isMedico) row.classList.add('pncp-row-medico');
+
+    const badgeHtml = isImported
+        ? '<span class="pncp-badge-importado"><i class="bx bx-check"></i> Importado</span>'
+        : '<span class="pncp-badge-novo"><i class="bx bx-plus-circle"></i> Novo</span>';
+
+    const medicoTag = isMedico ? '<span class="pncp-tag-medico"><i class="bx bxs-first-aid"></i> Médico</span>' : '';
+
+    const sitLabel = getSituacaoLabel(item);
+    const sitCss = getSituacaoCss(item);
+    const orgao = item.orgaoEntidade?.razaoSocial || '-';
+    const valorStr = formatPncpValor(item.valorTotalEstimado);
+    const modalidade = item.modalidadeNome || '-';
+    const numCompra = item.numeroCompra || item.numeroControlePNCP || '-';
+
+    row.innerHTML = `
+        <td>${badgeHtml}</td>
+        <td>${numCompra}</td>
+        <td class="pncp-objeto-cell" title="${orgao}">${orgao}${medicoTag}</td>
+        <td>${formatPncpLocal(item)}</td>
+        <td>${modalidade}</td>
+        <td class="pncp-valor">${valorStr}</td>
+        <td><span class="status ${sitCss}">${sitLabel}</span></td>
+        <td>
+            <div class="actions">
+                <button class="btn-icon" data-pncp-action="ver" title="Ver detalhes">
+                    <i class='bx bxs-show'></i>
+                </button>
+                ${isImported ? '' : `<button class="btn-icon" data-pncp-action="importar" title="Importar como edital">
+                    <i class='bx bxs-download'></i>
+                </button>`}
+            </div>
+        </td>
+    `;
+
+    // Store item data on row
+    row._pncpItem = item;
+    return row;
+}
+
+// Sort PNCP results
+let pncpSortField = '';
+let pncpSortDir = '';   // 'asc' | 'desc'
+
+function sortPncpCache(field, dir) {
+    if (!field) {
+        pncpCache = [...pncpCacheOriginal];
+    } else {
+        pncpCache = [...pncpCacheOriginal];
+        const asc = dir === 'asc' ? 1 : -1;
+        pncpCache.sort((a, b) => {
+            if (field === 'valor') return asc * ((a.valorTotalEstimado || 0) - (b.valorTotalEstimado || 0));
+            if (field === 'orgao') return asc * (a.orgaoEntidade?.razaoSocial || '').localeCompare(b.orgaoEntidade?.razaoSocial || '', 'pt-BR');
+            if (field === 'municipio') return asc * formatPncpLocal(a).localeCompare(formatPncpLocal(b), 'pt-BR');
+            return 0;
+        });
+    }
+    renderPncpTable(pncpCache);
+    updatePncpSortIcons();
+}
+
+function updatePncpSortIcons() {
+    const table = document.getElementById('pncpTable');
+    if (!table) return;
+    table.querySelectorAll('th.sortable').forEach(th => {
+        const icon = th.querySelector('.sort-icon');
+        if (!icon) return;
+        const f = th.dataset.sort;
+        if (f === pncpSortField) {
+            icon.className = pncpSortDir === 'asc' ? 'bx bx-sort-up sort-icon active' : 'bx bx-sort-down sort-icon active';
+        } else {
+            icon.className = 'bx bx-sort-alt-2 sort-icon';
+        }
+    });
+}
+
+function handlePncpHeaderSort(field) {
+    if (pncpSortField === field) {
+        if (pncpSortDir === 'desc') { pncpSortDir = 'asc'; }
+        else if (pncpSortDir === 'asc') { pncpSortField = ''; pncpSortDir = ''; }
+    } else {
+        pncpSortField = field;
+        pncpSortDir = 'desc';
+    }
+    sortPncpCache(pncpSortField, pncpSortDir);
+}
+
+// Render PNCP results table
+function renderPncpTable(items) {
+    if (!pncpTableBody) return;
+    if (!items || items.length === 0) {
+        pncpTableBody.innerHTML = '<tr><td colspan="8" class="pncp-loading">Nenhuma contratação encontrada para os filtros selecionados.</td></tr>';
+        return;
+    }
+    pncpTableBody.innerHTML = '';
+    items.forEach(item => pncpTableBody.appendChild(buildPncpRow(item)));
+}
+
+// Update summary cards
+function updatePncpSummary() {
+    const imported = getPncpImportedSet();
+    const importedCount = pncpCache.filter(i => imported.has(i.numeroControlePNCP || '')).length;
+    const novos = pncpCache.length - importedCount;
+
+    const el = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    el('pncpResumoResultados', pncpTotalRegistros);
+    el('pncpResumoImportados', importedCount);
+    el('pncpResumoNovos', novos);
+    el('pncpResumoPaginas', pncpTotalPages);
+
+    // Show/hide "Importar novos" button
+    if (pncpImportarTodosBtn) {
+        pncpImportarTodosBtn.style.display = novos > 0 ? '' : 'none';
+    }
+}
+
+// Update pagination
+function updatePncpPagination() {
+    if (!pncpPagination) return;
+    pncpPagination.style.display = pncpTotalPages > 1 ? 'flex' : 'none';
+    const info = document.getElementById('pncpPaginaInfo');
+    if (info) info.textContent = `Página ${pncpCurrentPage} de ${pncpTotalPages}`;
+
+    const prev = document.getElementById('pncpPrevPage');
+    const next = document.getElementById('pncpNextPage');
+    if (prev) prev.disabled = pncpCurrentPage <= 1;
+    if (next) next.disabled = pncpCurrentPage >= pncpTotalPages;
+}
+
+// Main search function
+async function buscarPncp(pagina = 1) {
+    if (!pncpTableBody) return;
+
+    const dataInicial = document.getElementById('pncpDataInicial')?.value;
+    const dataFinal = document.getElementById('pncpDataFinal')?.value;
+    const codigoModalidade = document.getElementById('pncpModalidade')?.value;
+    const uf = document.getElementById('pncpUf')?.value || '';
+    const codigoMunicipioIbge = document.getElementById('pncpMunicipio')?.value || '';
+    const cnpj = document.getElementById('pncpCnpj')?.value.replace(/[.\-\/]/g, '') || '';
+    const buscaTexto = (document.getElementById('pncpBuscaTexto')?.value || '').toLowerCase().trim();
+
+    if (!dataInicial || !dataFinal) {
+        alert('Preencha Data inicial e Data final.');
+        return;
+    }
+
+    // Format dates YYYYMMDD
+    const fmtData = d => d.replace(/-/g, '');
+
+    pncpLastFilters = { dataInicial: fmtData(dataInicial), dataFinal: fmtData(dataFinal), codigoModalidade, uf, codigoMunicipioIbge, cnpj, buscaTexto };
+
+    // Show loading
+    if (pncpResultadosCard) pncpResultadosCard.style.display = '';
+    pncpTableBody.innerHTML = '<tr><td colspan="8" class="pncp-loading"><i class="bx bx-loader-alt bx-spin"></i>Consultando PNCP...</td></tr>';
+
+    if (pncpBuscarBtn) {
+        pncpBuscarBtn.disabled = true;
+        pncpBuscarBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Buscando...';
+    }
+
+    try {
+        const params = new URLSearchParams({
+            dataInicial: pncpLastFilters.dataInicial,
+            dataFinal: pncpLastFilters.dataFinal,
+            pagina,
+            tamanhoPagina: 15,
+        });
+        if (codigoModalidade) params.set('codigoModalidadeContratacao', codigoModalidade);
+        if (uf) params.set('uf', uf);
+        if (codigoMunicipioIbge) params.set('codigoMunicipioIbge', codigoMunicipioIbge);
+        if (cnpj) params.set('cnpj', cnpj);
+
+        const response = await fetch(`/api/pncp/contratacoes?${params.toString()}`);
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detalhe || err.erro || 'Erro ao consultar PNCP');
+        }
+
+        const resultado = await response.json();
+        let items = resultado.data || [];
+
+        // Client-side text filter on objetoCompra
+        if (buscaTexto) {
+            items = items.filter(item => {
+                const text = [
+                    item.objetoCompra,
+                    item.orgaoEntidade?.razaoSocial,
+                    item.informacaoComplementar
+                ].filter(Boolean).join(' ').toLowerCase();
+                return text.includes(buscaTexto);
+            });
+        }
+
+        pncpCache = items;
+        pncpCacheOriginal = [...items];
+        pncpCurrentPage = resultado.numeroPagina || pagina;
+        pncpTotalPages = resultado.totalPaginas || 0;
+        pncpTotalRegistros = resultado.totalRegistros || 0;
+
+        // Aplicar ordenação ativa
+        if (pncpSortField) {
+            sortPncpCache(pncpSortField, pncpSortDir);
+        } else {
+            renderPncpTable(pncpCache);
+        }
+        updatePncpSummary();
+        updatePncpPagination();
+
+    } catch (error) {
+        console.error('Erro PNCP:', error);
+        pncpTableBody.innerHTML = `<tr><td colspan="8" class="pncp-loading"><i class='bx bxs-error-circle' style="color:#e74c3c;"></i>${error.message}</td></tr>`;
+    } finally {
+        if (pncpBuscarBtn) {
+            pncpBuscarBtn.disabled = false;
+            pncpBuscarBtn.innerHTML = '<i class="bx bx-search"></i> Buscar no PNCP';
+        }
+    }
+}
+
+// Import single contratação as edital
+async function importarPncpComoEdital(item) {
+    const numCtrl = item.numeroControlePNCP || '';
+    if (!numCtrl) {
+        alert('Contratação sem número de controle PNCP.');
+        return false;
+    }
+
+    // Check if already imported
+    if (getPncpImportedSet().has(numCtrl)) {
+        alert('Esta contratação já foi importada.');
+        return false;
+    }
+
+    // Determine fields
+    const orgaoNome = item.orgaoEntidade?.razaoSocial || '';
+    const unidade = item.unidadeOrgao || {};
+    const ufSigla = unidade.ufSigla || '';
+    const municipio = unidade.municipioNome || '';
+
+    let tipoOrgao = 'Municipal';
+    const esfera = item.orgaoEntidade?.esferaId;
+    if (esfera === 'F') tipoOrgao = 'Federal';
+    else if (esfera === 'E') tipoOrgao = 'Estadual';
+
+    let status = 'aberto';
+    const situacaoId = item.situacaoCompraId;
+    if (situacaoId === '2') status = 'em_analise';
+    else if (situacaoId === '3') status = 'adjudicado';
+    else if (situacaoId === '4') status = 'encerrado';
+
+    let vigencia = '';
+    if (item.dataAberturaProposta) {
+        vigencia = 'Abertura: ' + formatPncpDate(item.dataAberturaProposta);
+    }
+    if (item.dataEncerramentoProposta) {
+        vigencia += (vigencia ? ' | ' : '') + 'Encerramento: ' + formatPncpDate(item.dataEncerramentoProposta);
+    }
+    if (!vigencia) vigencia = formatPncpDate(item.dataPublicacaoPncp);
+
+    const resumoParts = [
+        item.modalidadeNome ? `Modalidade: ${item.modalidadeNome}` : '',
+        item.valorTotalEstimado ? `Valor estimado: ${formatPncpValor(item.valorTotalEstimado)}` : '',
+        item.situacaoCompraNome ? `Situação PNCP: ${item.situacaoCompraNome}` : '',
+        item.informacaoComplementar || '',
+        `Nº Controle PNCP: ${numCtrl}`
+    ].filter(Boolean).join('\n');
+
+    const payload = {
+        numero: item.numeroCompra || numCtrl,
+        orgao: orgaoNome,
+        tipoOrgao,
+        estado: ufSigla,
+        municipio,
+        vigencia: vigencia || '-',
+        objeto: item.objetoCompra || '',
+        resumo: resumoParts,
+        status,
+        pncpNumeroControle: numCtrl,
+        linkSistemaOrigem: item.linkSistemaOrigem || ''
+    };
+
+    try {
+        const response = await fetch('/api/editais', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error('Falha ao importar');
+        // Refresh editais cache
+        await loadEditais();
+        await loadEditaisForSelect();
+        return true;
+    } catch (err) {
+        console.error('Erro ao importar PNCP:', err);
+        alert('Erro ao importar contratação: ' + err.message);
+        return false;
+    }
+}
+
+// Show detail modal
+function abrirPncpDetalhe(item) {
+    pncpDetalheAtual = item;
+    if (!pncpDetalheModal || !pncpDetalheConteudo) return;
+
+    const imported = getPncpImportedSet();
+    const isImported = imported.has(item.numeroControlePNCP || '');
+
+    const pub = formatPncpDate(item.dataPublicacaoPncp);
+    const abertura = formatPncpDate(item.dataAberturaProposta);
+    const encerramento = formatPncpDate(item.dataEncerramentoProposta);
+    const orgao = item.orgaoEntidade?.razaoSocial || '-';
+    const cnpjOrgao = item.orgaoEntidade?.cnpj || '-';
+    const unidade = item.unidadeOrgao?.nomeUnidade || '-';
+    const local = formatPncpLocal(item);
+    const modalidade = item.modalidadeNome || '-';
+    const modoDisputa = item.modoDisputaNome || '-';
+    const situacao = getSituacaoLabel(item);
+    const valorEst = formatPncpValor(item.valorTotalEstimado);
+    const valorHom = formatPncpValor(item.valorTotalHomologado);
+    const objeto = item.objetoCompra || '-';
+    const info = item.informacaoComplementar || '';
+    const numCtrl = item.numeroControlePNCP || '-';
+    const linkSistema = item.linkSistemaOrigem || '';
+    const linkProcesso = item.linkProcessoEletronico || '';
+
+    pncpDetalheConteudo.innerHTML = `
+        <div class="pncp-detalhe-grid">
+            <div class="pncp-field">
+                <label>Nº da Compra</label>
+                <span>${item.numeroCompra || '-'}</span>
+            </div>
+            <div class="pncp-field">
+                <label>Nº Controle PNCP</label>
+                <span>${numCtrl}</span>
+            </div>
+            <div class="pncp-field">
+                <label>Órgão</label>
+                <span>${orgao}</span>
+            </div>
+            <div class="pncp-field">
+                <label>CNPJ</label>
+                <span>${cnpjOrgao}</span>
+            </div>
+            <div class="pncp-field">
+                <label>Unidade</label>
+                <span>${unidade}</span>
+            </div>
+            <div class="pncp-field">
+                <label>Local</label>
+                <span>${local}</span>
+            </div>
+            <div class="pncp-field">
+                <label>Modalidade</label>
+                <span>${modalidade}</span>
+            </div>
+            <div class="pncp-field">
+                <label>Modo de Disputa</label>
+                <span>${modoDisputa}</span>
+            </div>
+            <div class="pncp-field">
+                <label>Situação</label>
+                <span><span class="status ${getSituacaoCss(item)}">${situacao}</span></span>
+            </div>
+            <div class="pncp-field">
+                <label>Publicação PNCP</label>
+                <span>${pub}</span>
+            </div>
+            <div class="pncp-field">
+                <label>Abertura de Propostas</label>
+                <span>${abertura}</span>
+            </div>
+            <div class="pncp-field">
+                <label>Encerramento de Propostas</label>
+                <span>${encerramento}</span>
+            </div>
+            <div class="pncp-field">
+                <label>Valor Total Estimado</label>
+                <span class="pncp-valor">${valorEst}</span>
+            </div>
+            <div class="pncp-field">
+                <label>Valor Total Homologado</label>
+                <span class="pncp-valor">${valorHom}</span>
+            </div>
+        </div>
+        <div class="pncp-field" style="margin-top:16px;">
+            <label>Objeto</label>
+            <p>${objeto}</p>
+        </div>
+        ${info ? `<div class="pncp-field"><label>Informação Complementar</label><p>${info}</p></div>` : ''}
+        ${linkSistema ? `<div class="pncp-field"><label>Link Sistema Origem</label><a href="${linkSistema}" target="_blank" rel="noopener">${linkSistema}</a></div>` : ''}
+        ${linkProcesso ? `<div class="pncp-field"><label>Link Processo Eletrônico</label><a href="${linkProcesso}" target="_blank" rel="noopener">${linkProcesso}</a></div>` : ''}
+        ${isImported ? '<p style="margin-top:12px;color:#2e7d32;font-weight:600;"><i class="bx bx-check-circle"></i> Esta contratação já foi importada como edital.</p>' : ''}
+    `;
+
+    if (pncpImportarDetalheBtn) {
+        pncpImportarDetalheBtn.style.display = isImported ? 'none' : '';
+    }
+
+    pncpDetalheModal.classList.add('show');
+    pncpDetalheModal.setAttribute('aria-hidden', 'false');
+}
+
+function fecharPncpDetalhe() {
+    if (!pncpDetalheModal) return;
+    pncpDetalheModal.classList.remove('show');
+    pncpDetalheModal.setAttribute('aria-hidden', 'true');
+    pncpDetalheAtual = null;
+}
+
+// ── Município dinâmico via IBGE API ──
+const pncpUfSelect = document.getElementById('pncpUf');
+const pncpMunicipioSelect = document.getElementById('pncpMunicipio');
+
+function resetPncpMunicipio() {
+    if (!pncpMunicipioSelect) return;
+    pncpMunicipioSelect.innerHTML = '<option value="">Selecione a UF primeiro</option>';
+    pncpMunicipioSelect.disabled = true;
+}
+
+async function carregarMunicipiosIbge(uf) {
+    if (!pncpMunicipioSelect) return;
+    if (!uf) { resetPncpMunicipio(); return; }
+    pncpMunicipioSelect.innerHTML = '<option value="">Carregando...</option>';
+    pncpMunicipioSelect.disabled = true;
+    try {
+        const resp = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`);
+        if (!resp.ok) throw new Error('Erro IBGE');
+        const municipios = await resp.json();
+        pncpMunicipioSelect.innerHTML = '<option value="">Todos</option>';
+        municipios.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;          // código IBGE
+            opt.textContent = m.nome;
+            pncpMunicipioSelect.appendChild(opt);
+        });
+        pncpMunicipioSelect.disabled = false;
+    } catch (err) {
+        console.error('Erro ao carregar municípios IBGE:', err);
+        pncpMunicipioSelect.innerHTML = '<option value="">Erro ao carregar</option>';
+    }
+}
+
+if (pncpUfSelect) {
+    pncpUfSelect.addEventListener('change', () => {
+        carregarMunicipiosIbge(pncpUfSelect.value);
+    });
+}
+
+// Event listeners PNCP
+document.getElementById('pncpTable')?.querySelector('thead')?.addEventListener('click', (e) => {
+    const th = e.target.closest('th.sortable');
+    if (th && th.dataset.sort) handlePncpHeaderSort(th.dataset.sort);
+});
+
+if (pncpFilterForm) {
+    pncpFilterForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        pncpCurrentPage = 1;
+        buscarPncp(1);
+    });
+}
+
+if (pncpLimparBtn) {
+    pncpLimparBtn.addEventListener('click', () => {
+        if (pncpFilterForm) pncpFilterForm.reset();
+        resetPncpMunicipio();
+        initPncpDates();
+        pncpCache = [];
+        pncpCacheOriginal = [];
+        pncpSortField = '';
+        pncpSortDir = '';
+        pncpTotalPages = 0;
+        pncpTotalRegistros = 0;
+        if (pncpResultadosCard) pncpResultadosCard.style.display = 'none';
+        updatePncpSummary();
+    });
+}
+
+// Pagination
+document.getElementById('pncpPrevPage')?.addEventListener('click', () => {
+    if (pncpCurrentPage > 1) buscarPncp(pncpCurrentPage - 1);
+});
+document.getElementById('pncpNextPage')?.addEventListener('click', () => {
+    if (pncpCurrentPage < pncpTotalPages) buscarPncp(pncpCurrentPage + 1);
+});
+
+// Table actions (ver / importar)
+if (pncpTableBody) {
+    pncpTableBody.addEventListener('click', async (e) => {
+        const button = e.target.closest('button[data-pncp-action]');
+        if (!button) return;
+        const action = button.dataset.pncpAction;
+        const row = button.closest('tr');
+        const item = row?._pncpItem;
+        if (!item) return;
+
+        if (action === 'ver') {
+            abrirPncpDetalhe(item);
+        }
+
+        if (action === 'importar') {
+            button.disabled = true;
+            button.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i>';
+            const ok = await importarPncpComoEdital(item);
+            if (ok) {
+                // Re-render to update badges
+                renderPncpTable(pncpCache);
+                updatePncpSummary();
+            }
+            button.disabled = false;
+            button.innerHTML = '<i class="bx bxs-download"></i>';
+        }
+    });
+}
+
+// Import all new
+if (pncpImportarTodosBtn) {
+    pncpImportarTodosBtn.addEventListener('click', async () => {
+        const imported = getPncpImportedSet();
+        const novos = pncpCache.filter(i => !imported.has(i.numeroControlePNCP || ''));
+        if (novos.length === 0) {
+            alert('Todas as contratações já foram importadas.');
+            return;
+        }
+        if (!confirm(`Importar ${novos.length} contratação(ões) como editais?`)) return;
+
+        pncpImportarTodosBtn.disabled = true;
+        pncpImportarTodosBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Importando...';
+
+        let importados = 0;
+        for (const item of novos) {
+            const ok = await importarPncpComoEdital(item);
+            if (ok) importados++;
+        }
+
+        pncpImportarTodosBtn.disabled = false;
+        pncpImportarTodosBtn.innerHTML = '<i class="bx bxs-download"></i> Importar novos';
+
+        renderPncpTable(pncpCache);
+        updatePncpSummary();
+        alert(`${importados} contratação(ões) importada(s) com sucesso!`);
+    });
+}
+
+// Detail modal buttons
+if (pncpImportarDetalheBtn) {
+    pncpImportarDetalheBtn.addEventListener('click', async () => {
+        if (!pncpDetalheAtual) return;
+        pncpImportarDetalheBtn.disabled = true;
+        pncpImportarDetalheBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Importando...';
+        const ok = await importarPncpComoEdital(pncpDetalheAtual);
+        pncpImportarDetalheBtn.disabled = false;
+        pncpImportarDetalheBtn.innerHTML = '<i class="bx bxs-download"></i> Importar como edital';
+        if (ok) {
+            fecharPncpDetalhe();
+            renderPncpTable(pncpCache);
+            updatePncpSummary();
+        }
+    });
+}
+
+document.getElementById('fecharPncpDetalhe')?.addEventListener('click', fecharPncpDetalhe);
+document.getElementById('pncpFecharDetalheBtn')?.addEventListener('click', fecharPncpDetalhe);
+
+if (pncpDetalheModal) {
+    pncpDetalheModal.addEventListener('click', (e) => {
+        if (e.target === pncpDetalheModal) fecharPncpDetalhe();
+    });
+}
+
 window.addEventListener('load', loadContratosTable);
 window.addEventListener('load', loadEditaisForSelect);
+window.addEventListener('load', loadEditais);
 window.addEventListener('load', function () {
     setActivePage('dashboard');
+    initPncpDates();
 });
 window.addEventListener('load', loadMedicos);
 window.addEventListener('load', loadPlantoes);

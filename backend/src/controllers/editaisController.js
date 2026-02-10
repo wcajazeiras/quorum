@@ -67,6 +67,17 @@ class EditaisController {
       res.status(400).json({ erro: erro.message });
     }
   }
+
+  // PUT /api/editais/:id - Atualizar edital
+  async atualizar(req, res) {
+    try {
+      const { id } = req.params;
+      const edital = await EditaisService.atualizarEdital(id, req.body);
+      res.json(edital);
+    } catch (erro) {
+      res.status(400).json({ erro: erro.message });
+    }
+  }
 }
 
 module.exports = new EditaisController();

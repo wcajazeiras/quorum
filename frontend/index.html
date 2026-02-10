@@ -29,6 +29,12 @@
 				</a>
 			</li>
 			<li>
+				<a href="#" data-page="pncp">
+					<i class='bx bxs-cloud-download bx-sm' ></i>
+					<span class="text">PNCP</span>
+				</a>
+			</li>
+			<li>
 				<a href="#" data-page="editais">
 					<i class='bx bxs-book-open bx-sm' ></i>
 					<span class="text">Editais</span>
@@ -191,8 +197,8 @@
 							<thead>
 								<tr>
 									<th>Contrato</th>
-									<th>Orgao</th>
-									<th>Municipio/UF</th>
+									<th>Órgão</th>
+									<th>Município/UF</th>
 									<th>Período</th>
 									<th>Status</th>
 								</tr>
@@ -248,131 +254,196 @@
 					<div class="left">
 						<h1>Editais</h1>
 						<ul class="breadcrumb">
-							<li>
-								<a href="#">Editais</a>
-							</li>
-							<li><i class='bx bx-chevron-right' ></i></li>
-							<li>
-								<a class="active" href="#">Leitura de requisitos</a>
-							</li>
-						</ul>
-					</div>
-					<a href="#" class="btn-download" data-page="editais-novo" id="abrirCadastroEdital">
-						<i class='bx bxs-file-plus bx-fade-down-hover' ></i>
-						<span class="text">Novo Edital</span>
-					</a>
-				</div>
-
-				<div class="edital-grid">
-					<div class="edital-card">
-						<div class="card-head">
-							<h3>Leitura de PDF</h3>
-							<p>Envie o edital para mapear automaticamente os requisitos.</p>
-						</div>
-						<div class="edital-actions">
-							<a href="#" class="btn-primary" data-page="editais-novo">Analisar PDF</a>
-						</div>
-					</div>
-
-					<div class="edital-card">
-						<div class="card-head">
-							<h3>Novos editais publicados</h3>
-							<p>Alertas recentes para monitoramento rapido.</p>
-						</div>
-						<ul class="edital-feed">
-							<li>
-								<div>
-									<strong>Prefeitura de Sao Paulo</strong>
-									<span>Credenciamento de especialistas</span>
-								</div>
-								<span class="tag">SP</span>
-							</li>
-							<li>
-								<div>
-									<strong>Estado de Minas Gerais</strong>
-									<span>Plantao hospitalar regional</span>
-								</div>
-								<span class="tag">MG</span>
-							</li>
-							<li>
-								<div>
-									<strong>Secretaria de Saude RS</strong>
-									<span>Credenciamento UTI adulto</span>
-								</div>
-								<span class="tag">RS</span>
-							</li>
+							<li><a href="#">Editais</a></li>
+							<li><i class='bx bx-chevron-right'></i></li>
+							<li><a class="active" href="#">Visão geral</a></li>
 						</ul>
 					</div>
 				</div>
 
-			</section>
-
-			<section class="page" data-page="editais-novo">
-				<div class="head-title">
-					<div class="left">
-						<h1>Novo edital</h1>
-						<ul class="breadcrumb">
-							<li>
-								<a href="#" data-page="editais">Editais</a>
-							</li>
-							<li><i class='bx bx-chevron-right' ></i></li>
-							<li>
-								<a class="active" href="#">Novo edital</a>
-							</li>
-						</ul>
-					</div>
-					<a href="#" class="btn-download" data-page="editais" id="voltarEdital">
-						<i class='bx bx-left-arrow-alt' ></i>
-						<span class="text">Voltar</span>
-					</a>
-				</div>
-
-				<p>Envie o PDF para extrair automaticamente requisitos e checklist.</p>
-				<div class="edital-grid">
-					<div class="edital-card upload-card">
-						<div class="card-head">
-							<h3>Upload do edital (PDF)</h3>
-							<p>Envie o PDF para extrair automaticamente os requisitos.</p>
+				<!-- Summary Cards -->
+				<div class="contratos-summary-grid">
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon blue">
+							<i class='bx bxs-file-doc'></i>
 						</div>
-						<label class="upload-area" for="editalPdfInput">
-							<i class='bx bxs-cloud-upload'></i>
-							<span>Arraste o arquivo aqui ou clique para selecionar</span>
-							<small id="editalPdfName">Nenhum arquivo selecionado</small>
-						</label>
-						<input type="file" id="editalPdfInput" accept="application/pdf" hidden>
-						<button class="btn-primary" id="analisarEditalBtn">Identificar requisitos</button>
-					</div>
-
-					<div class="edital-card">
-						<div class="card-head">
-							<h3>Resumo do edital</h3>
-							<p>Principais requisitos identificados automaticamente.</p>
+						<div class="contratos-summary-info">
+							<strong id="editaisResumoTotal">0</strong>
+							<span>Total de editais</span>
 						</div>
-						<ul class="requirements-list" id="editalRequirements">
-							<li class="placeholder">Nenhum requisito identificado.</li>
-						</ul>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon green">
+							<i class='bx bxs-check-circle'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="editaisResumoAbertos">0</strong>
+							<span>Abertos</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon yellow">
+							<i class='bx bxs-analyse'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="editaisResumoAnalise">0</strong>
+							<span>Em análise</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon grey">
+							<i class='bx bxs-lock'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="editaisResumoEncerrados">0</strong>
+							<span>Encerrados</span>
+						</div>
 					</div>
 				</div>
 
-				<div class="edital-card table-card">
+				<!-- Editais Table Card -->
+				<div class="contratos-card">
 					<div class="head">
-						<h3>Checklist de requisitos</h3>
-						<i class='bx bx-filter'></i>
+						<h3>Editais cadastrados</h3>
+						<div class="contratos-actions">
+							<button class="btn-primary" id="abrirCadastroEdital">
+								<i class='bx bx-plus'></i> Novo edital
+							</button>
+						</div>
 					</div>
-					<table class="requirements-table">
+
+					<div class="contratos-filters">
+						<div>
+							<label for="editaisFilterStatus">Status</label>
+							<select id="editaisFilterStatus">
+								<option value="">Todos</option>
+								<option value="aberto">Aberto</option>
+								<option value="em_analise">Em análise</option>
+								<option value="adjudicado">Adjudicado</option>
+								<option value="encerrado">Encerrado</option>
+								<option value="cancelado">Cancelado</option>
+							</select>
+						</div>
+						<div>
+							<label for="editaisFilterBusca">Buscar</label>
+							<input type="text" id="editaisFilterBusca" placeholder="Número, órgão, objeto...">
+						</div>
+					</div>
+
+					<table class="medicos-table">
 						<thead>
 							<tr>
-								<th>Requisito</th>
-								<th>Criticidade</th>
+								<th>Número</th>
+								<th>Órgão</th>
+								<th>UF/Município</th>
+								<th>Vigência</th>
 								<th>Status</th>
+								<th>Ações</th>
 							</tr>
 						</thead>
-						<tbody id="editalChecklist">
+						<tbody id="editaisTableBody">
 							<tr>
-								<td colspan="3">Carregue um PDF para gerar o checklist.</td>
+								<td colspan="6">Carregando editais...</td>
 							</tr>
 						</tbody>
 					</table>
+				</div>
+
+				<!-- Edital Modal -->
+				<div class="modal" id="editalModal" aria-hidden="true">
+					<div class="modal-content modal-lg">
+						<div class="modal-header">
+							<h3>Cadastro de edital</h3>
+							<button class="modal-close" type="button" id="fecharCadastroEdital">&times;</button>
+						</div>
+						<p>Preencha os dados do edital ou importe de um PDF.</p>
+						<form id="editalForm" class="medico-form">
+							<div class="edital-pdf-row">
+								<label class="upload-area upload-area-inline" for="editalPdfInput">
+									<i class='bx bxs-cloud-upload'></i>
+									<span id="editalPdfName">Importar PDF do edital</span>
+								</label>
+								<input type="file" id="editalPdfInput" accept="application/pdf" hidden>
+								<button type="button" class="btn-secondary" id="analisarEditalBtn">
+									<i class='bx bxs-analyse'></i> Analisar PDF
+								</button>
+							</div>
+							<div class="form-row">
+								<div class="form-group">
+									<label>Número</label>
+									<input type="text" id="editalNumero" placeholder="Ex: PE 001/2026" required>
+								</div>
+								<div class="form-group">
+									<label>Órgão</label>
+									<input type="text" id="editalOrgao" placeholder="Ex: Prefeitura de São Paulo" required>
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-group">
+									<label>Tipo de órgão</label>
+									<select id="editalTipoOrgao">
+										<option value="Município">Município</option>
+										<option value="Estado">Estado</option>
+										<option value="Federal">Federal</option>
+									</select>
+								</div>
+								<div class="form-group">
+									<label>Estado</label>
+									<input type="text" id="editalEstado" placeholder="Ex: SP" maxlength="2">
+								</div>
+								<div class="form-group">
+									<label>Município</label>
+									<input type="text" id="editalMunicipio" placeholder="Ex: São Paulo">
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-group">
+									<label>Vigência</label>
+									<input type="text" id="editalVigencia" placeholder="Ex: 12 meses" required>
+								</div>
+								<div class="form-group">
+									<label>Status</label>
+									<select id="editalStatus">
+										<option value="aberto">Aberto</option>
+										<option value="em_analise">Em análise</option>
+										<option value="adjudicado">Adjudicado</option>
+										<option value="encerrado">Encerrado</option>
+										<option value="cancelado">Cancelado</option>
+									</select>
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-group" style="grid-column: 1 / -1;">
+									<label>Objeto</label>
+									<textarea id="editalObjeto" rows="2" placeholder="Descrição do objeto da licitação"></textarea>
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-group" style="grid-column: 1 / -1;">
+									<label>Resumo / Observações</label>
+									<textarea id="editalResumo" rows="2" placeholder="Resumo ou observações adicionais"></textarea>
+								</div>
+							</div>
+							<button type="submit" class="btn-primary">Salvar edital</button>
+						</form>
+					</div>
+				</div>
+
+				<!-- Edital View Modal -->
+				<div class="modal" id="editalViewModal" aria-hidden="true">
+					<div class="modal-content modal-lg">
+						<div class="modal-header">
+							<h3><i class='bx bxs-file-doc' style="margin-right:6px;"></i> Detalhes do edital</h3>
+							<button class="modal-close" type="button" id="fecharViewEdital">&times;</button>
+						</div>
+						<div id="editalViewConteudo" class="edital-view-body">
+							<p>Carregando...</p>
+						</div>
+						<div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border-color);margin-top:16px;">
+							<button class="btn-secondary" id="editalViewEditarBtn"><i class='bx bxs-edit'></i> Editar</button>
+							<button class="btn-secondary" id="editalViewFecharBtn">Fechar</button>
+						</div>
+					</div>
 				</div>
 			</section>
 
@@ -383,7 +454,7 @@
 						<ul class="breadcrumb">
 							<li><a href="#">Contratos</a></li>
 							<li><i class='bx bx-chevron-right' ></i></li>
-							<li><a class="active" href="#">Visao geral</a></li>
+							<li><a class="active" href="#">Visão geral</a></li>
 						</ul>
 					</div>
 				</div>
@@ -458,7 +529,7 @@
 						</div>
 						<div>
 							<label for="contratosFilterBusca">Buscar</label>
-							<input id="contratosFilterBusca" type="text" placeholder="Numero, orgao, responsavel...">
+							<input id="contratosFilterBusca" type="text" placeholder="Número, órgão, responsável...">
 						</div>
 					</div>
 
@@ -467,11 +538,11 @@
 							<tr>
 								<th>Contrato</th>
 								<th>Edital</th>
-								<th>Orgao</th>
-								<th>Periodo</th>
+								<th>Órgão</th>
+								<th>Período</th>
 								<th>Valor</th>
 								<th>Status</th>
-								<th>Acoes</th>
+								<th>Ações</th>
 							</tr>
 						</thead>
 						<tbody id="contratosPageTableBody">
@@ -489,7 +560,7 @@
 							<h3 id="contratoModalTitulo">Cadastro de contrato</h3>
 							<button class="modal-close" type="button" id="fecharCadastroContrato">&times;</button>
 						</div>
-						<p>Cadastre contratos vinculados a editais de licitacao.</p>
+						<p>Cadastre contratos vinculados a editais de licitação.</p>
 						<form id="contratoForm" class="contrato-form">
 							<input type="hidden" id="contratoId">
 
@@ -501,7 +572,7 @@
 									</select>
 								</div>
 								<div class="form-group">
-									<label for="contratoNumero">Numero do contrato</label>
+									<label for="contratoNumero">Número do contrato</label>
 									<input type="text" id="contratoNumero" placeholder="Ex: CT-001/2026">
 								</div>
 							</div>
@@ -514,17 +585,17 @@
 							<div class="form-row">
 								<div class="form-group">
 									<label for="contratoValor">Valor (R$)</label>
-									<input type="number" id="contratoValor" step="0.01" min="0" placeholder="0,00">
+									<input type="text" id="contratoValor" placeholder="0,00" inputmode="numeric">
 								</div>
 								<div class="form-group">
-									<label for="contratoResponsavel">Responsavel</label>
-									<input type="text" id="contratoResponsavel" placeholder="Nome do responsavel">
+									<label for="contratoResponsavel">Responsável</label>
+									<input type="text" id="contratoResponsavel" placeholder="Nome do responsável">
 								</div>
 							</div>
 
 							<div class="form-row">
 								<div class="form-group">
-									<label for="contratoDataInicio">Data inicio *</label>
+									<label for="contratoDataInicio">Data início *</label>
 									<input type="date" id="contratoDataInicio" required>
 								</div>
 								<div class="form-group">
@@ -543,8 +614,8 @@
 							</div>
 
 							<div class="form-group">
-								<label for="contratoObservacoes">Observacoes</label>
-								<textarea id="contratoObservacoes" rows="2" placeholder="Observacoes adicionais..."></textarea>
+								<label for="contratoObservacoes">Observações</label>
+								<textarea id="contratoObservacoes" rows="2" placeholder="Observações adicionais..."></textarea>
 							</div>
 
 							<div class="form-actions">
@@ -569,9 +640,9 @@
 				</div>
 				<div class="medicos-card">
 					<div class="head">
-						<h3>Medicos cadastrados</h3>
+						<h3>Médicos cadastrados</h3>
 						<div class="medicos-actions">
-							<button class="btn-primary" id="abrirCadastroMedico">Cadastrar medico</button>
+							<button class="btn-primary" id="abrirCadastroMedico">Cadastrar médico</button>
 						</div>
 					</div>
 					<div class="medicos-filters">
@@ -598,12 +669,12 @@
 								<th>CRM</th>
 								<th>Cidade/UF</th>
 								<th>Status</th>
-								<th>Acoes</th>
+								<th>Ações</th>
 							</tr>
 						</thead>
 						<tbody id="medicosTableBody">
 							<tr>
-								<td colspan="6">Carregando medicos...</td>
+								<td colspan="6">Carregando médicos...</td>
 							</tr>
 						</tbody>
 					</table>
@@ -615,8 +686,15 @@
 							<h3>Cadastro de médicos</h3>
 							<button class="modal-close" type="button" id="fecharCadastroMedico">&times;</button>
 						</div>
-						<p>Registre profissionais e organize as informações basicas.</p>
+						<p>Registre profissionais e organize as informações básicas.</p>
 						<form id="medicoForm" class="medico-form">
+							<div class="medico-foto-upload">
+								<div class="foto-preview" id="medicoFotoPreview">
+									<i class='bx bxs-camera'></i>
+									<span>Adicionar foto</span>
+								</div>
+								<input type="file" id="medicoFotoInput" accept="image/*" hidden>
+							</div>
 							<div class="form-row">
 								<div class="form-group">
 									<label>Nome completo</label>
@@ -659,7 +737,7 @@
 									</select>
 								</div>
 							</div>
-							<button type="submit" class="btn-primary">Salvar medico</button>
+							<button type="submit" class="btn-primary">Salvar médico</button>
 						</form>
 					</div>
 				</div>
@@ -677,7 +755,7 @@
 					</div>
 					<a href="#" class="btn-download abrir-cadastro-plantao">
 						<i class='bx bxs-calendar-plus bx-fade-down-hover' ></i>
-						<span class="text">Novo plantao</span>
+						<span class="text">Novo plantão</span>
 					</a>
 				</div>
 
@@ -686,7 +764,7 @@
 						<div class="head">
 							<h3>Agenda de plantões</h3>
 							<div class="plantoes-actions">
-								<button class="btn-primary abrir-cadastro-plantao" type="button">Cadastrar plantao</button>
+								<button class="btn-primary abrir-cadastro-plantao" type="button">Cadastrar plantão</button>
 							</div>
 						</div>
 
@@ -697,7 +775,7 @@
 									<option value="">Todos</option>
 									<option value="agendado">Agendado</option>
 									<option value="hoje">Hoje</option>
-									<option value="concluido">Concluido</option>
+									<option value="concluido">Concluído</option>
 								</select>
 							</div>
 							<div>
@@ -707,7 +785,7 @@
 								</select>
 							</div>
 							<div>
-								<label for="plantoesFilterPeriodo">Periodo</label>
+								<label for="plantoesFilterPeriodo">Período</label>
 								<input id="plantoesFilterPeriodo" type="text" placeholder="Ex: 10/03 - 20/03">
 							</div>
 						</div>
@@ -715,17 +793,18 @@
 						<table class="plantoes-table">
 							<thead>
 								<tr>
+									<th>Contrato</th>
 									<th>Data</th>
-									<th>Medico</th>
+									<th>Médico</th>
 									<th>Especialidade</th>
 									<th>Local</th>
 									<th>Status</th>
-									<th>Acoes</th>
+									<th>Ações</th>
 								</tr>
 							</thead>
 							<tbody id="plantoesTableBody">
 								<tr>
-									<td colspan="6">Carregando plantões...</td>
+									<td colspan="7">Carregando plantões...</td>
 								</tr>
 							</tbody>
 						</table>
@@ -733,13 +812,13 @@
 
 					<div class="plantoes-card">
 						<div class="head">
-							<h3>Resumo do periodo</h3>
+							<h3>Resumo do período</h3>
 							<i class='bx bx-filter'></i>
 						</div>
 						<ul class="plantoes-summary">
 							<li>
 								<strong id="plantoesResumoConcluidos">0</strong>
-								<span>Plantões concluidos</span>
+								<span>Plantões concluídos</span>
 							</li>
 							<li>
 								<strong id="plantoesResumoHoje">0</strong>
@@ -759,27 +838,33 @@
 							<h3>Cadastro de plantão</h3>
 							<button class="modal-close" type="button" id="fecharCadastroPlantao">&times;</button>
 						</div>
-						<p>Registre plantões, médicos envolvidos e carga horaria.</p>
+						<p>Registre plantões, médicos envolvidos e carga horária.</p>
 						<form id="plantaoForm" class="plantao-form">
 							<div class="form-row">
 								<div class="form-group">
-									<label>Medico</label>
-									<select id="plantaoMedico" required>
+									<label>Contrato</label>
+									<select id="plantaoContrato" required>
 										<option value="">Selecione</option>
 									</select>
 								</div>
 								<div class="form-group">
-									<label>Data</label>
-									<input type="date" id="plantaoData" required>
+									<label>Médico</label>
+									<select id="plantaoMedico" required>
+										<option value="">Selecione</option>
+									</select>
 								</div>
 							</div>
 							<div class="form-row">
 								<div class="form-group">
-									<label>Carga horaria (h)</label>
+									<label>Data</label>
+									<input type="date" id="plantaoData" required>
+								</div>
+								<div class="form-group">
+									<label>Carga horária (h)</label>
 									<input type="number" id="plantaoCargaHoraria" min="1" max="24" placeholder="Ex: 12" required>
 								</div>
 							</div>
-							<button type="submit" class="btn-primary">Salvar plantao</button>
+							<button type="submit" class="btn-primary">Salvar plantão</button>
 						</form>
 					</div>
 				</div>
@@ -802,6 +887,204 @@
 				</div>
 			</section>
 
+			<!-- ========== PNCP - Portal Nacional de Contratações Públicas ========== -->
+			<section class="page" data-page="pncp">
+				<div class="head-title">
+					<div class="left">
+						<h1>Consulta PNCP</h1>
+						<ul class="breadcrumb">
+							<li><a href="#">PNCP</a></li>
+							<li><i class='bx bx-chevron-right'></i></li>
+							<li><a class="active" href="#">Contratações</a></li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- Summary Cards PNCP -->
+				<div class="contratos-summary-grid">
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon blue">
+							<i class='bx bxs-search-alt-2'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="pncpResumoResultados">0</strong>
+							<span>Resultados encontrados</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon green">
+							<i class='bx bxs-download'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="pncpResumoImportados">0</strong>
+							<span>Já importados</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon yellow">
+							<i class='bx bxs-bell-ring'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="pncpResumoNovos">0</strong>
+							<span>Novos (não importados)</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon grey">
+							<i class='bx bxs-file-find'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="pncpResumoPaginas">0</strong>
+							<span>Total de páginas</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Filters Card PNCP -->
+				<div class="contratos-card">
+					<div class="head">
+						<h3><i class='bx bxs-filter-alt' style="margin-right:6px;"></i>Filtros de busca PNCP</h3>
+					</div>
+					<form id="pncpFilterForm" class="medico-form pncp-filter-form">
+						<div class="form-row">
+							<div class="form-group">
+								<label>Data inicial *</label>
+								<input type="date" id="pncpDataInicial" required>
+							</div>
+							<div class="form-group">
+								<label>Data final *</label>
+								<input type="date" id="pncpDataFinal" required>
+							</div>
+							<div class="form-group">
+								<label>Modalidade</label>
+								<select id="pncpModalidade">
+									<option value="">Selecione...</option>
+									<option value="5">Pregão (Lei 14.133)</option>
+									<option value="4">Concorrência (Lei 14.133)</option>
+									<option value="6">Dispensa de Licitação (Lei 14.133)</option>
+									<option value="7">Inexigibilidade (Lei 14.133)</option>
+									<option value="9">Credenciamento (Lei 14.133)</option>
+									<option value="2">Diálogo Competitivo (Lei 14.133)</option>
+									<option value="8">Pré-qualificação (Lei 14.133)</option>
+									<option value="1">Leilão (Lei 14.133)</option>
+									<option value="3">Concurso (Lei 14.133)</option>
+									<option value="14">Pregão (Lei 10.520)</option>
+									<option value="12">Concorrência (Lei 8.666)</option>
+									<option value="17">Tomada de Preços (Lei 8.666)</option>
+									<option value="13">Convite (Lei 8.666)</option>
+									<option value="15">Dispensa (Lei 8.666)</option>
+									<option value="16">Inexigibilidade (Lei 8.666)</option>
+								</select>
+							</div>
+						</div>
+						<div class="form-row">
+							<div class="form-group">
+								<label>UF</label>
+								<select id="pncpUf">
+									<option value="">Todas</option>
+									<option value="AC">AC</option><option value="AL">AL</option>
+									<option value="AM">AM</option><option value="AP">AP</option>
+									<option value="BA">BA</option><option value="CE">CE</option>
+									<option value="DF">DF</option><option value="ES">ES</option>
+									<option value="GO">GO</option><option value="MA">MA</option>
+									<option value="MG">MG</option><option value="MS">MS</option>
+									<option value="MT">MT</option><option value="PA">PA</option>
+									<option value="PB">PB</option><option value="PE">PE</option>
+									<option value="PI">PI</option><option value="PR">PR</option>
+									<option value="RJ">RJ</option><option value="RN">RN</option>
+									<option value="RO">RO</option><option value="RR">RR</option>
+									<option value="RS">RS</option><option value="SC">SC</option>
+									<option value="SE">SE</option><option value="SP">SP</option>
+									<option value="TO">TO</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label>Município</label>
+								<select id="pncpMunicipio" disabled>
+									<option value="">Selecione a UF primeiro</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label>CNPJ do órgão</label>
+								<input type="text" id="pncpCnpj" placeholder="Ex: 00.000.000/0001-00">
+							</div>
+							<div class="form-group">
+								<label>Busca no objeto</label>
+								<input type="text" id="pncpBuscaTexto" placeholder="Filtrar por saúde, médico, hospital...">
+							</div>
+						</div>
+						<div class="pncp-filter-actions">
+							<button type="submit" class="btn-primary" id="pncpBuscarBtn">
+								<i class='bx bx-search'></i> Buscar no PNCP
+							</button>
+							<button type="button" class="btn-secondary" id="pncpLimparBtn">
+								<i class='bx bx-eraser'></i> Limpar
+							</button>
+						</div>
+					</form>
+				</div>
+
+				<!-- Results Table PNCP -->
+				<div class="contratos-card" id="pncpResultadosCard" style="display:none;">
+					<div class="head">
+						<h3><i class='bx bxs-spreadsheet' style="margin-right:6px;"></i>Contratações encontradas</h3>
+						<div class="contratos-actions">
+							<button class="btn-secondary" id="pncpImportarTodosBtn" style="display:none;">
+								<i class='bx bxs-download'></i> Importar novos
+							</button>
+						</div>
+					</div>
+
+					<table class="medicos-table" id="pncpTable">
+						<thead>
+							<tr>
+								<th style="width:30px;"></th>
+								<th>Nº Compra</th>
+								<th class="sortable" data-sort="orgao">Órgão <i class='bx bx-sort-alt-2 sort-icon'></i></th>
+								<th class="sortable" data-sort="municipio">UF/Município <i class='bx bx-sort-alt-2 sort-icon'></i></th>
+								<th>Modalidade</th>
+								<th class="sortable" data-sort="valor">Valor estimado <i class='bx bx-sort-alt-2 sort-icon'></i></th>
+								<th>Situação</th>
+								<th>Ações</th>
+							</tr>
+						</thead>
+						<tbody id="pncpTableBody">
+							<tr><td colspan="8">Realize uma busca acima.</td></tr>
+						</tbody>
+					</table>
+
+					<!-- Pagination -->
+					<div class="pncp-pagination" id="pncpPagination" style="display:none;">
+						<button class="btn-secondary" id="pncpPrevPage" disabled>
+							<i class='bx bx-chevron-left'></i> Anterior
+						</button>
+						<span id="pncpPaginaInfo">Página 1 de 1</span>
+						<button class="btn-secondary" id="pncpNextPage" disabled>
+							Próxima <i class='bx bx-chevron-right'></i>
+						</button>
+					</div>
+				</div>
+
+				<!-- PNCP Detail Modal -->
+				<div class="modal" id="pncpDetalheModal" aria-hidden="true">
+					<div class="modal-content modal-lg">
+						<div class="modal-header">
+							<h3>Detalhes da contratação PNCP</h3>
+							<button class="modal-close" type="button" id="fecharPncpDetalhe">&times;</button>
+						</div>
+						<div id="pncpDetalheConteudo" class="pncp-detalhe-body">
+							<p>Carregando...</p>
+						</div>
+						<div class="pncp-detalhe-footer">
+							<button class="btn-primary" id="pncpImportarDetalheBtn">
+								<i class='bx bxs-download'></i> Importar como edital
+							</button>
+							<button class="btn-secondary" id="pncpFecharDetalheBtn">Fechar</button>
+						</div>
+					</div>
+				</div>
+			</section>
+
 			<section class="page" data-page="relatorios">
 				<div class="head-title">
 					<div class="left">
@@ -809,12 +1092,12 @@
 						<ul class="breadcrumb">
 							<li><a href="#">Relatórios</a></li>
 							<li><i class='bx bx-chevron-right' ></i></li>
-							<li><a class="active" href="#">Evidenciacao</a></li>
+							<li><a class="active" href="#">Evidenciação</a></li>
 						</ul>
 					</div>
 					<a href="#" class="btn-download">
 						<i class='bx bxs-cloud-download bx-fade-down-hover' ></i>
-						<span class="text">Gerar dossie</span>
+						<span class="text">Gerar dossiê</span>
 					</a>
 				</div>
 
@@ -822,7 +1105,7 @@
 					<div class="relatorios-card">
 						<div class="card-head">
 							<h3>Resumo do contrato</h3>
-							<p>Visao consolidada para prestação de contas.</p>
+							<p>Visão consolidada para prestação de contas.</p>
 						</div>
 						<ul class="relatorios-summary">
 							<li>
@@ -830,11 +1113,11 @@
 								<strong>#2026-014</strong>
 							</li>
 							<li>
-								<span>Orgao</span>
-								<strong>Secretaria Municipal de Saude</strong>
+								<span>Órgão</span>
+								<strong>Secretaria Municipal de Saúde</strong>
 							</li>
 							<li>
-								<span>Periodo</span>
+								<span>Período</span>
 								<strong>01/01/2026 - 31/12/2026</strong>
 							</li>
 							<li>
@@ -843,7 +1126,7 @@
 							</li>
 							<li>
 								<span>Status</span>
-								<strong class="relatorios-tag">Em execucao</strong>
+								<strong class="relatorios-tag">Em execução</strong>
 							</li>
 						</ul>
 					</div>
@@ -851,28 +1134,28 @@
 					<div class="relatorios-card">
 						<div class="card-head">
 							<h3>Processo de prestação de contas</h3>
-							<p>Etapas detalhadas do fluxo de evidenciacao.</p>
+							<p>Etapas detalhadas do fluxo de evidenciação.</p>
 						</div>
 						<ol class="process-steps">
 							<li>
-								<strong>1. Consolidacao de producao</strong>
+								<strong>1. Consolidação de produção</strong>
 								<span>Horas cumpridas, plantões realizados e escalas.</span>
 							</li>
 							<li>
-								<strong>2. Evidencias documentais</strong>
+								<strong>2. Evidências documentais</strong>
 								<span>Contratos, termos aditivos, comprovantes e checklists.</span>
 							</li>
 							<li>
-								<strong>3. Validacao operacional</strong>
-								<span>Conferencia da equipe tecnica e gestores responsaveis.</span>
+								<strong>3. Validação operacional</strong>
+								<span>Conferência da equipe técnica e gestores responsáveis.</span>
 							</li>
 							<li>
-								<strong>4. Relatorio financeiro</strong>
-								<span>Notas fiscais, empenhos e conciliacao de pagamentos.</span>
+								<strong>4. Relatório financeiro</strong>
+								<span>Notas fiscais, empenhos e conciliação de pagamentos.</span>
 							</li>
 							<li>
-								<strong>5. Dossie final</strong>
-								<span>Pacote completo para auditoria e publicacao.</span>
+								<strong>5. Dossiê final</strong>
+								<span>Pacote completo para auditoria e publicação.</span>
 							</li>
 						</ol>
 					</div>
@@ -881,9 +1164,9 @@
 				<div class="relatorios-grid">
 					<div class="relatorios-card">
 						<div class="head">
-							<h3>Evidencias do contrato</h3>
+							<h3>Evidências do contrato</h3>
 							<div class="relatorios-actions">
-								<button class="btn-primary" type="button">Adicionar evidencia</button>
+								<button class="btn-primary" type="button">Adicionar evidência</button>
 							</div>
 						</div>
 						<table class="relatorios-table">
@@ -892,7 +1175,7 @@
 									<th>Documento</th>
 									<th>Tipo</th>
 									<th>Data</th>
-									<th>Responsavel</th>
+									<th>Responsável</th>
 									<th>Status</th>
 								</tr>
 							</thead>
@@ -905,11 +1188,11 @@
 									<td><span class="status completed">Validado</span></td>
 								</tr>
 								<tr>
-									<td>Relatorio de producao</td>
+									<td>Relatório de produção</td>
 									<td>Indicadores</td>
 									<td>06/02/2026</td>
-									<td>Coordenacao tecnica</td>
-									<td><span class="status process">Em revisao</span></td>
+									<td>Coordenação técnica</td>
+									<td><span class="status process">Em revisão</span></td>
 								</tr>
 								<tr>
 									<td>Nota fiscal 2026-011</td>
@@ -924,7 +1207,7 @@
 
 					<div class="relatorios-card">
 						<div class="head">
-							<h3>Conformidade e evidencias</h3>
+							<h3>Conformidade e evidências</h3>
 							<i class='bx bx-check-shield'></i>
 						</div>
 						<ul class="relatorios-checklist">
@@ -933,7 +1216,7 @@
 								<span class="status completed">Ok</span>
 							</li>
 							<li>
-								<span>Registro de presenca validado</span>
+								<span>Registro de presença validado</span>
 								<span class="status completed">Ok</span>
 							</li>
 							<li>
@@ -941,8 +1224,8 @@
 								<span class="status pending">Pendente</span>
 							</li>
 							<li>
-								<span>Relatorio de indicadores entregue</span>
-								<span class="status process">Em revisao</span>
+								<span>Relatório de indicadores entregue</span>
+								<span class="status process">Em revisão</span>
 							</li>
 						</ul>
 					</div>

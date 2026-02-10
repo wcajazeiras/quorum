@@ -17,8 +17,8 @@ class PlantõesController {
   // POST /api/plantoes - Criar novo plantão
   async criar(req, res) {
     try {
-      const { medicoId, data, cargaHoraria } = req.body;
-      const plantao = await PlantõesService.criarPlantao(medicoId, data, cargaHoraria);
+      const { medicoId, data, cargaHoraria, contratoId } = req.body;
+      const plantao = await PlantõesService.criarPlantao(medicoId, data, cargaHoraria, contratoId);
       res.status(201).json(plantao);
     } catch (erro) {
       res.status(400).json({ erro: erro.message });
@@ -40,8 +40,8 @@ class PlantõesController {
   async atualizar(req, res) {
     try {
       const { id } = req.params;
-      const { medicoId, data, cargaHoraria } = req.body;
-      const plantao = await PlantõesService.atualizarPlantao(id, medicoId, data, cargaHoraria);
+      const { medicoId, data, cargaHoraria, contratoId } = req.body;
+      const plantao = await PlantõesService.atualizarPlantao(id, medicoId, data, cargaHoraria, contratoId);
       res.json(plantao);
     } catch (erro) {
       res.status(400).json({ erro: erro.message });
