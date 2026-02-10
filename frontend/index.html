@@ -447,6 +447,188 @@
 				</div>
 			</section>
 
+			<!-- Edital Detalhe Page -->
+			<section class="page" data-page="edital-detalhe">
+				<div class="head-title">
+					<div class="left">
+						<h1 id="editalDetalheTitle">Detalhes do Edital</h1>
+						<ul class="breadcrumb">
+							<li><a href="#" data-page="editais">Editais</a></li>
+							<li><i class='bx bx-chevron-right'></i></li>
+							<li><a class="active" href="#" id="editalDetalheBreadcrumb">Detalhes</a></li>
+						</ul>
+					</div>
+					<div class="right" id="editalDetalheHeaderActions" style="display:flex;gap:8px;align-items:center;">
+						<a href="#" target="_blank" rel="noopener" id="editalDetalhePncpLinkBtn" class="btn-pncp-header" style="display:none;">
+							<i class='bx bxs-cloud-download'></i> Ver no PNCP
+						</a>
+					</div>
+				</div>
+
+				<!-- Valor Total Estimado Card (PNCP) -->
+				<div id="editalDetalheResumoCards" class="edital-resumo-cards" style="display:none;">
+					<div class="edital-resumo-card card-valor-total">
+						<div class="edital-resumo-card-icon"><i class='bx bx-money'></i></div>
+						<div class="edital-resumo-card-info">
+							<span class="edital-resumo-card-label">Valor Total Estimado</span>
+							<span class="edital-resumo-card-value" id="editalDetalheValorTotal">-</span>
+						</div>
+					</div>
+					<div class="edital-resumo-card card-itens-count">
+						<div class="edital-resumo-card-icon"><i class='bx bx-list-ol'></i></div>
+						<div class="edital-resumo-card-info">
+							<span class="edital-resumo-card-label">Itens</span>
+							<span class="edital-resumo-card-value" id="editalDetalheItensCount">-</span>
+						</div>
+					</div>
+					<div class="edital-resumo-card card-arquivos-count">
+						<div class="edital-resumo-card-icon"><i class='bx bx-file'></i></div>
+						<div class="edital-resumo-card-info">
+							<span class="edital-resumo-card-label">Arquivos</span>
+							<span class="edital-resumo-card-value" id="editalDetalheArquivosCount">-</span>
+						</div>
+					</div>
+					<div class="edital-resumo-card card-situacao">
+						<div class="edital-resumo-card-icon"><i class='bx bx-info-circle'></i></div>
+						<div class="edital-resumo-card-info">
+							<span class="edital-resumo-card-label">Situação PNCP</span>
+							<span class="edital-resumo-card-value" id="editalDetalheSituacaoPncp">-</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tab Navigation -->
+				<div class="edital-detalhe-tabs" id="editalDetalheTabs">
+					<button class="edital-tab active" data-tab="detalhes"><i class='bx bxs-file-doc'></i> Detalhes</button>
+					<button class="edital-tab" data-tab="itens" id="editalTabItens" style="display:none;"><i class='bx bx-list-ol'></i> Itens PNCP</button>
+					<button class="edital-tab" data-tab="arquivos" id="editalTabArquivos" style="display:none;"><i class='bx bx-file'></i> Arquivos</button>
+				</div>
+
+				<!-- Tab: Detalhes -->
+				<div class="edital-tab-content active" data-tab-content="detalhes">
+					<!-- Visualização -->
+					<div id="editalDetalheView">
+						<div class="contratos-card">
+							<div class="head">
+								<h3><i class='bx bxs-file-doc' style="margin-right:6px;"></i> Informações do Edital</h3>
+								<div class="contratos-actions" style="gap:8px;display:flex;">
+									<button class="btn-primary" id="editalDetalheEditarBtn"><i class='bx bxs-edit'></i> Editar</button>
+									<button class="btn-secondary" id="editalDetalheVoltarBtn"><i class='bx bx-arrow-back'></i> Voltar</button>
+								</div>
+							</div>
+							<div id="editalDetalheConteudo" class="edital-view-body" style="padding:16px 0;">
+								<p>Carregando...</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Edição -->
+					<div id="editalDetalheEdit" style="display:none;">
+						<div class="contratos-card">
+							<div class="head">
+								<h3><i class='bx bxs-edit' style="margin-right:6px;"></i> Editar Edital</h3>
+								<div class="contratos-actions" style="gap:8px;display:flex;">
+									<button class="btn-secondary" id="editalDetalheCancelarBtn"><i class='bx bx-x'></i> Cancelar</button>
+								</div>
+							</div>
+							<form id="editalDetalheForm" class="medico-form" style="padding:16px 0;">
+								<div class="edital-pdf-row">
+									<label class="upload-area upload-area-inline" for="editalDetalhePdfInput">
+										<i class='bx bxs-cloud-upload'></i>
+										<span id="editalDetalhePdfName">Importar PDF do edital</span>
+									</label>
+									<input type="file" id="editalDetalhePdfInput" accept="application/pdf" hidden>
+									<button type="button" class="btn-secondary" id="analisarEditalDetalheBtn">
+										<i class='bx bxs-analyse'></i> Analisar PDF
+									</button>
+								</div>
+								<div class="form-row">
+									<div class="form-group">
+										<label>Número</label>
+										<input type="text" id="edDetalheNumero" placeholder="Ex: PE 001/2026" required>
+									</div>
+									<div class="form-group">
+										<label>Órgão</label>
+										<input type="text" id="edDetalheOrgao" placeholder="Ex: Prefeitura de São Paulo" required>
+									</div>
+								</div>
+								<div class="form-row">
+									<div class="form-group">
+										<label>Tipo de órgão</label>
+										<select id="edDetalheTipoOrgao">
+											<option value="Município">Município</option>
+											<option value="Estado">Estado</option>
+											<option value="Federal">Federal</option>
+										</select>
+									</div>
+									<div class="form-group">
+										<label>Estado</label>
+										<input type="text" id="edDetalheEstado" placeholder="Ex: SP" maxlength="2">
+									</div>
+									<div class="form-group">
+										<label>Município</label>
+										<input type="text" id="edDetalheMunicipio" placeholder="Ex: São Paulo">
+									</div>
+								</div>
+								<div class="form-row">
+									<div class="form-group">
+										<label>Vigência</label>
+										<input type="text" id="edDetalheVigencia" placeholder="Ex: 12 meses" required>
+									</div>
+									<div class="form-group">
+										<label>Status</label>
+										<select id="edDetalheStatus">
+											<option value="aberto">Aberto</option>
+											<option value="em_analise">Em análise</option>
+											<option value="adjudicado">Adjudicado</option>
+											<option value="encerrado">Encerrado</option>
+											<option value="cancelado">Cancelado</option>
+										</select>
+									</div>
+								</div>
+								<div class="form-row">
+									<div class="form-group" style="grid-column: 1 / -1;">
+										<label>Objeto</label>
+										<textarea id="edDetalheObjeto" rows="3" placeholder="Descrição do objeto da licitação"></textarea>
+									</div>
+								</div>
+								<div class="form-row">
+									<div class="form-group" style="grid-column: 1 / -1;">
+										<label>Resumo / Observações</label>
+										<textarea id="edDetalheResumo" rows="3" placeholder="Resumo ou observações adicionais"></textarea>
+									</div>
+								</div>
+								<button type="submit" class="btn-primary"><i class='bx bxs-save'></i> Salvar alterações</button>
+							</form>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tab: Itens PNCP -->
+				<div class="edital-tab-content" data-tab-content="itens">
+					<div class="contratos-card">
+						<div class="head">
+							<h3><i class='bx bx-list-ol' style="margin-right:6px;"></i> Itens da Contratação</h3>
+						</div>
+						<div id="editalDetalheItensBody" style="padding:8px 0;">
+							<p class="edital-tab-placeholder"><i class='bx bx-loader-alt bx-spin'></i> Carregando itens...</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tab: Arquivos PNCP -->
+				<div class="edital-tab-content" data-tab-content="arquivos">
+					<div class="contratos-card">
+						<div class="head">
+							<h3><i class='bx bx-file' style="margin-right:6px;"></i> Documentos e Arquivos</h3>
+						</div>
+						<div id="editalDetalheArquivosBody" style="padding:8px 0;">
+							<p class="edital-tab-placeholder"><i class='bx bx-loader-alt bx-spin'></i> Carregando arquivos...</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
 			<section class="page" data-page="contratos">
 				<div class="head-title">
 					<div class="left">
@@ -573,7 +755,23 @@
 								</div>
 								<div class="form-group">
 									<label for="contratoNumero">Número do contrato</label>
-									<input type="text" id="contratoNumero" placeholder="Ex: CT-001/2026">
+									<input type="text" id="contratoNumero" placeholder="Gerado automaticamente" readonly style="background:var(--grey);cursor:default;">
+								</div>
+							</div>
+
+							<!-- Info do edital selecionado -->
+							<div id="contratoEditalInfo" class="contrato-edital-info" style="display:none;">
+								<div class="contrato-edital-info-header">
+									<i class='bx bxs-info-circle'></i> Dados do Edital
+									<span id="contratoEditalContratosExistentes" class="contrato-edital-badge" style="display:none;"></span>
+								</div>
+								<div class="contrato-edital-info-grid">
+									<div><span class="label">Órgão</span><span class="value" id="contratoInfoOrgao">-</span></div>
+									<div><span class="label">UF / Município</span><span class="value" id="contratoInfoLocal">-</span></div>
+									<div><span class="label">Objeto do Edital</span><span class="value" id="contratoInfoObjeto">-</span></div>
+									<div><span class="label">Vigência</span><span class="value" id="contratoInfoVigencia">-</span></div>
+									<div><span class="label">Status do Edital</span><span class="value" id="contratoInfoStatus">-</span></div>
+									<div><span class="label">Valor Estimado</span><span class="value" id="contratoInfoValor">-</span></div>
 								</div>
 							</div>
 
@@ -623,6 +821,106 @@
 								<button type="submit" class="btn-primary">Salvar contrato</button>
 							</div>
 						</form>
+					</div>
+				</div>
+			</section>
+
+			<!-- ===== CONTRATO DETALHE PAGE ===== -->
+			<section class="page" data-page="contrato-detalhe">
+				<div class="head-title">
+					<div class="left">
+						<h1 id="contratoDetalheTitle">Detalhes do Contrato</h1>
+						<ul class="breadcrumb">
+							<li><a href="#" data-page="contratos">Contratos</a></li>
+							<li><i class='bx bx-chevron-right'></i></li>
+							<li><a class="active" href="#" id="contratoDetalheBreadcrumb">Detalhes</a></li>
+						</ul>
+					</div>
+					<div class="right" style="display:flex;gap:8px;align-items:center;">
+						<a href="#" target="_blank" rel="noopener" id="contratoDetalhePncpLinkBtn" class="btn-pncp-header" style="display:none;">
+							<i class='bx bxs-cloud-download'></i> Ver no PNCP
+						</a>
+					</div>
+				</div>
+
+				<!-- Summary Cards (PNCP) -->
+				<div id="contratoDetalheResumoCards" class="edital-resumo-cards" style="display:none;">
+					<div class="edital-resumo-card card-valor-total">
+						<div class="edital-resumo-card-icon"><i class='bx bx-money'></i></div>
+						<div class="edital-resumo-card-info">
+							<span class="edital-resumo-card-label">Valor do Contrato</span>
+							<span class="edital-resumo-card-value" id="contratoDetalheValorTotal">-</span>
+						</div>
+					</div>
+					<div class="edital-resumo-card card-itens-count">
+						<div class="edital-resumo-card-icon"><i class='bx bx-list-ol'></i></div>
+						<div class="edital-resumo-card-info">
+							<span class="edital-resumo-card-label">Itens PNCP</span>
+							<span class="edital-resumo-card-value" id="contratoDetalheItensCount">-</span>
+						</div>
+					</div>
+					<div class="edital-resumo-card card-arquivos-count">
+						<div class="edital-resumo-card-icon"><i class='bx bx-file'></i></div>
+						<div class="edital-resumo-card-info">
+							<span class="edital-resumo-card-label">Arquivos</span>
+							<span class="edital-resumo-card-value" id="contratoDetalheArquivosCount">-</span>
+						</div>
+					</div>
+					<div class="edital-resumo-card card-situacao">
+						<div class="edital-resumo-card-icon"><i class='bx bx-info-circle'></i></div>
+						<div class="edital-resumo-card-info">
+							<span class="edital-resumo-card-label">Status</span>
+							<span class="edital-resumo-card-value" id="contratoDetalheStatusCard">-</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tab Navigation -->
+				<div class="edital-detalhe-tabs" id="contratoDetalheTabs">
+					<button class="edital-tab active" data-contrato-tab="detalhes"><i class='bx bxs-file-doc'></i> Detalhes</button>
+					<button class="edital-tab" data-contrato-tab="itens" id="contratoTabItens" style="display:none;"><i class='bx bx-list-ol'></i> Itens PNCP</button>
+					<button class="edital-tab" data-contrato-tab="arquivos" id="contratoTabArquivos" style="display:none;"><i class='bx bx-file'></i> Arquivos</button>
+				</div>
+
+				<!-- Tab: Detalhes -->
+				<div class="contrato-tab-content active" data-contrato-tab-content="detalhes">
+					<div id="contratoDetalheView">
+						<div class="contratos-card">
+							<div class="head">
+								<h3><i class='bx bxs-file-doc' style="margin-right:6px;"></i> Informações do Contrato</h3>
+								<div class="contratos-actions" style="gap:8px;display:flex;">
+									<button class="btn-primary" id="contratoDetalheEditarBtn"><i class='bx bxs-edit'></i> Editar</button>
+									<button class="btn-secondary" id="contratoDetalheVoltarBtn"><i class='bx bx-arrow-back'></i> Voltar</button>
+								</div>
+							</div>
+							<div id="contratoDetalheConteudo" class="edital-view-body" style="padding:16px 0;">
+								<p>Carregando...</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tab: Itens PNCP -->
+				<div class="contrato-tab-content" data-contrato-tab-content="itens">
+					<div class="contratos-card">
+						<div class="head">
+							<h3><i class='bx bx-list-ol' style="margin-right:6px;"></i> Itens da Contratação (PNCP)</h3>
+						</div>
+						<div id="contratoDetalheItensBody" style="padding:8px 0;">
+							<p class="edital-tab-placeholder"><i class='bx bx-loader-alt bx-spin'></i> Carregando itens...</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tab: Arquivos PNCP -->
+				<div class="contrato-tab-content" data-contrato-tab-content="arquivos">
+					<div class="contratos-card">
+						<div class="head">
+							<h3><i class='bx bx-file' style="margin-right:6px;"></i> Documentos e Arquivos (PNCP)</h3>
+						</div>
+						<div id="contratoDetalheArquivosBody" style="padding:8px 0;">
+							<p class="edital-tab-placeholder"><i class='bx bx-loader-alt bx-spin'></i> Carregando arquivos...</p>
+						</div>
 					</div>
 				</div>
 			</section>
@@ -908,7 +1206,7 @@
 						</div>
 						<div class="contratos-summary-info">
 							<strong id="pncpResumoResultados">0</strong>
-							<span>Resultados encontrados</span>
+							<span>Resultados encontrados <small id="pncpResumoTotalLabel" style="display:none;color:var(--dark-grey);"></small></span>
 						</div>
 					</div>
 					<div class="contratos-summary-card">
@@ -958,22 +1256,18 @@
 							<div class="form-group">
 								<label>Modalidade</label>
 								<select id="pncpModalidade">
-									<option value="">Selecione...</option>
-									<option value="5">Pregão (Lei 14.133)</option>
-									<option value="4">Concorrência (Lei 14.133)</option>
-									<option value="6">Dispensa de Licitação (Lei 14.133)</option>
-									<option value="7">Inexigibilidade (Lei 14.133)</option>
-									<option value="9">Credenciamento (Lei 14.133)</option>
-									<option value="2">Diálogo Competitivo (Lei 14.133)</option>
-									<option value="8">Pré-qualificação (Lei 14.133)</option>
-									<option value="1">Leilão (Lei 14.133)</option>
-									<option value="3">Concurso (Lei 14.133)</option>
-									<option value="14">Pregão (Lei 10.520)</option>
-									<option value="12">Concorrência (Lei 8.666)</option>
-									<option value="17">Tomada de Preços (Lei 8.666)</option>
-									<option value="13">Convite (Lei 8.666)</option>
-									<option value="15">Dispensa (Lei 8.666)</option>
-									<option value="16">Inexigibilidade (Lei 8.666)</option>
+									<option value="">Todas as modalidades</option>
+									<option value="6">Pregão - Eletrônico</option>
+									<option value="7">Pregão - Presencial</option>
+									<option value="4">Concorrência - Eletrônica</option>
+									<option value="5">Concorrência - Presencial</option>
+									<option value="8">Dispensa</option>
+									<option value="9">Inexigibilidade</option>
+									<option value="12">Credenciamento</option>
+									<option value="10">Manifestação de Interesse</option>
+									<option value="1">Leilão - Eletrônico</option>
+									<option value="13">Leilão - Presencial</option>
+									<option value="3">Concurso</option>
 								</select>
 							</div>
 						</div>
@@ -1013,6 +1307,15 @@
 								<input type="text" id="pncpBuscaTexto" placeholder="Filtrar por saúde, médico, hospital...">
 							</div>
 						</div>
+						<div class="form-row" style="align-items:flex-end;">
+							<div class="form-group" style="flex:1;">
+								<label>Id contratação PNCP</label>
+								<input type="text" id="pncpIdContratacao" placeholder="Ex: 17097791000112-1-000066/2025">
+							</div>
+							<div class="form-group" style="flex:0 0 auto;">
+								<span style="font-size:12px;color:var(--dark-grey);font-style:italic;">Preencha o Id para busca direta (ignora os demais filtros)</span>
+							</div>
+						</div>
 						<div class="pncp-filter-actions">
 							<button type="submit" class="btn-primary" id="pncpBuscarBtn">
 								<i class='bx bx-search'></i> Buscar no PNCP
@@ -1027,8 +1330,17 @@
 				<!-- Results Table PNCP -->
 				<div class="contratos-card" id="pncpResultadosCard" style="display:none;">
 					<div class="head">
-						<h3><i class='bx bxs-spreadsheet' style="margin-right:6px;"></i>Contratações encontradas</h3>
-						<div class="contratos-actions">
+						<h3 style="display:flex;align-items:center;gap:12px;">
+							<span><i class='bx bxs-spreadsheet' style="margin-right:6px;"></i>Contratações encontradas</span>
+							<label class="pncp-toggle-medico" id="pncpToggleMedicoLabel2" style="display:none;" title="Mostrar apenas contratações de mão de obra médica">
+								<input type="checkbox" id="pncpToggleMedico2">
+								<i class='bx bxs-first-aid'></i> Só médico
+							</label>
+						</h3>
+						<div class="contratos-actions" style="gap:10px;display:flex;align-items:center;">
+							<button class="btn-secondary" id="pncpImportarSelecionadosBtn" style="display:none;">
+								<i class='bx bxs-download'></i> Importar selecionados (<span id="pncpSelCount">0</span>)
+							</button>
 							<button class="btn-secondary" id="pncpImportarTodosBtn" style="display:none;">
 								<i class='bx bxs-download'></i> Importar novos
 							</button>
@@ -1038,8 +1350,9 @@
 					<table class="medicos-table" id="pncpTable">
 						<thead>
 							<tr>
+								<th style="width:36px;"><input type="checkbox" id="pncpSelectAll" title="Selecionar todos"></th>
 								<th style="width:30px;"></th>
-								<th>Nº Compra</th>
+								<th class="sortable" data-sort="numCompra">Nº Compra <i class='bx bx-sort-alt-2 sort-icon'></i></th>
 								<th class="sortable" data-sort="orgao">Órgão <i class='bx bx-sort-alt-2 sort-icon'></i></th>
 								<th class="sortable" data-sort="municipio">UF/Município <i class='bx bx-sort-alt-2 sort-icon'></i></th>
 								<th>Modalidade</th>
@@ -1049,7 +1362,7 @@
 							</tr>
 						</thead>
 						<tbody id="pncpTableBody">
-							<tr><td colspan="8">Realize uma busca acima.</td></tr>
+							<tr><td colspan="9">Realize uma busca acima.</td></tr>
 						</tbody>
 					</table>
 

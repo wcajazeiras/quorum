@@ -56,6 +56,21 @@ class ContratosController {
       res.status(400).json({ erro: erro.message });
     }
   }
+
+  // GET /api/contratos/proximo-numero/:editalId - Gerar próximo número de contrato
+  async proximoNumero(req, res) {
+    try {
+      const Contrato = require('../models/Contrato');
+      const ano = new Date().getFullYear();
+      const maiorSeq = await Contrato.buscarMaiorSequencialAno(ano);
+      const proximo = maiorSeq + 1;
+      const numero = `CT-${String(proximo).padStart(3, '0')}/${ano}`;
+      const contratosEdital = await Contrato.contarPorEdital(req.params.editalId);
+      res.json({ numero, sequencial: proximo, contratosExistentes: contratosEdital });
+    } catch (erro) {
+      res.status(500).json({ erro: erro.message });
+    }
+  }
 }
 
 module.exports = new ContratosController();

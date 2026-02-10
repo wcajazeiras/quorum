@@ -123,6 +123,7 @@ db.serialize(() => {
   ensureColumn('contratos', 'valor', 'REAL');
   ensureColumn('contratos', 'responsavel', 'TEXT');
   ensureColumn('contratos', 'observacoes', 'TEXT');
+  ensureColumn('contratos', 'pncpNumeroControle', 'TEXT');
 
   // Tabela de Médicos
   db.run(`

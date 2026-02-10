@@ -167,6 +167,7 @@ window.addEventListener('click', function (e) {
 // ========== CONTRATOS PAGE (FULL CRUD) ==========
 let contratosCache = [];
 let editaisCache = [];
+let contratoDetalheAtual = null;
 const contratosPageTableBody = document.getElementById('contratosPageTableBody');
 const contratosTableBody = document.getElementById('contratosTableBody'); // dashboard table
 
@@ -216,13 +217,16 @@ function buildContratoPageRow(contrato) {
 
     const row = document.createElement('tr');
     row.innerHTML = `
-        <td><span class="contrato-numero">${numero}</span></td>
+        <td><a href="#" class="contrato-numero-link" data-contrato-id="${contrato.id}">${numero}</a></td>
         <td><span class="contrato-edital">${editalLabel}</span></td>
         <td>${orgao}</td>
         <td>${periodo}</td>
         <td><span class="contrato-valor">${valor}</span></td>
         <td><span class="status ${statusMeta.css}">${statusMeta.label}</span></td>
         <td>
+            <button class="btn-icon" data-action="ver-contrato" data-id="${contrato.id}" title="Visualizar">
+                <i class='bx bxs-show'></i>
+            </button>
             <button class="btn-icon" data-action="editar-contrato" data-id="${contrato.id}" title="Editar">
                 <i class='bx bxs-edit'></i>
             </button>
@@ -411,12 +415,18 @@ function openContratoModal(contrato = null) {
     contratoForm.reset();
     document.getElementById('contratoId').value = '';
     document.getElementById('contratoStatus').value = 'ativo';
+    document.getElementById('contratoNumero').value = '';
+    document.getElementById('contratoNumero').readOnly = true;
+    document.getElementById('contratoNumero').style.background = 'var(--grey)';
+    hideContratoEditalInfo();
 
     if (contrato) {
         contratoModalTitulo.textContent = 'Editar contrato';
         document.getElementById('contratoId').value = contrato.id;
         document.getElementById('contratoEditalId').value = contrato.editalId;
         document.getElementById('contratoNumero').value = contrato.numero || '';
+        document.getElementById('contratoNumero').readOnly = false;
+        document.getElementById('contratoNumero').style.background = '';
         document.getElementById('contratoObjeto').value = contrato.objeto || '';
         document.getElementById('contratoValor').value = numberToCurrency(contrato.valor);
         document.getElementById('contratoResponsavel').value = contrato.responsavel || '';
@@ -424,6 +434,8 @@ function openContratoModal(contrato = null) {
         document.getElementById('contratoDataFim').value = contrato.dataFim || '';
         document.getElementById('contratoStatus').value = contrato.status || 'ativo';
         document.getElementById('contratoObservacoes').value = contrato.observacoes || '';
+        // Show edital info for editing too
+        if (contrato.editalId) populateContratoEditalInfo(contrato.editalId, true);
     } else {
         contratoModalTitulo.textContent = 'Cadastro de contrato';
     }
@@ -431,6 +443,96 @@ function openContratoModal(contrato = null) {
     contratoModal.classList.add('show');
     contratoModal.setAttribute('aria-hidden', 'false');
 }
+
+// Edital info panel in contract modal
+function hideContratoEditalInfo() {
+    const panel = document.getElementById('contratoEditalInfo');
+    if (panel) panel.style.display = 'none';
+}
+
+async function populateContratoEditalInfo(editalId, isEdit = false) {
+    const panel = document.getElementById('contratoEditalInfo');
+    if (!panel || !editalId) { hideContratoEditalInfo(); return; }
+
+    const edital = (editaisFullCache || []).find(e => String(e.id) === String(editalId));
+    if (!edital) { hideContratoEditalInfo(); return; }
+
+    // Fill info panel
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v || '-'; };
+    setVal('contratoInfoOrgao', edital.orgao);
+    const local = formatEditalLocal(edital);
+    setVal('contratoInfoLocal', local);
+    setVal('contratoInfoObjeto', edital.objeto);
+    setVal('contratoInfoVigencia', edital.vigencia);
+
+    const sm = getEditalStatusMeta(edital.status);
+    setVal('contratoInfoStatus', sm.label);
+
+    // Try to get estimated value from resumo
+    const valorMatch = (edital.resumo || '').match(/Valor estimado:\s*(R\$\s*[\d.,]+)/i);
+    setVal('contratoInfoValor', valorMatch ? valorMatch[1] : '-');
+
+    panel.style.display = '';
+
+    // Auto-populate form fields from edital (only for new contracts)
+    if (!isEdit) {
+        const objetoField = document.getElementById('contratoObjeto');
+        if (objetoField && !objetoField.value) objetoField.value = edital.objeto || '';
+
+        // Auto-generate contract number
+        try {
+            const resp = await fetch(`/api/contratos/proximo-numero/${editalId}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                const numField = document.getElementById('contratoNumero');
+                if (numField) numField.value = data.numero;
+
+                // Show existing contracts badge
+                const badge = document.getElementById('contratoEditalContratosExistentes');
+                if (badge) {
+                    if (data.contratosExistentes > 0) {
+                        badge.textContent = `${data.contratosExistentes} contrato(s) já vinculado(s)`;
+                        badge.style.display = '';
+                    } else {
+                        badge.textContent = 'Primeiro contrato';
+                        badge.style.display = '';
+                        badge.style.background = 'rgba(16, 185, 129, 0.15)';
+                        badge.style.color = '#059669';
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Erro ao gerar número do contrato:', err);
+        }
+    } else {
+        // For edit mode, still show contract count
+        try {
+            const resp = await fetch(`/api/contratos/proximo-numero/${editalId}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                const badge = document.getElementById('contratoEditalContratosExistentes');
+                if (badge && data.contratosExistentes > 0) {
+                    badge.textContent = `${data.contratosExistentes} contrato(s) vinculado(s)`;
+                    badge.style.display = '';
+                }
+            }
+        } catch (err) { /* ignore */ }
+    }
+}
+
+// Listen for edital selection change
+document.getElementById('contratoEditalId')?.addEventListener('change', function () {
+    const editalId = this.value;
+    const isEdit = !!document.getElementById('contratoId').value;
+    if (editalId) {
+        populateContratoEditalInfo(editalId, isEdit);
+    } else {
+        hideContratoEditalInfo();
+        if (!isEdit) {
+            document.getElementById('contratoNumero').value = '';
+        }
+    }
+});
 
 function closeContratoModal() {
     if (!contratoModal) return;
@@ -474,8 +576,19 @@ contratoForm?.addEventListener('submit', async function (e) {
     e.preventDefault();
 
     const id = document.getElementById('contratoId').value;
+    const editalId = document.getElementById('contratoEditalId').value;
+
+    // Get pncpNumeroControle from the selected edital
+    let pncpNumeroControle = null;
+    if (editalId) {
+        const edital = (editaisFullCache || []).find(ed => String(ed.id) === String(editalId));
+        if (edital && edital.pncpNumeroControle) {
+            pncpNumeroControle = edital.pncpNumeroControle;
+        }
+    }
+
     const dados = {
-        editalId: document.getElementById('contratoEditalId').value,
+        editalId,
         numero: document.getElementById('contratoNumero').value,
         objeto: document.getElementById('contratoObjeto').value,
         valor: parseCurrencyToNumber(document.getElementById('contratoValor').value),
@@ -483,7 +596,8 @@ contratoForm?.addEventListener('submit', async function (e) {
         dataInicio: document.getElementById('contratoDataInicio').value,
         dataFim: document.getElementById('contratoDataFim').value,
         status: document.getElementById('contratoStatus').value,
-        observacoes: document.getElementById('contratoObservacoes').value
+        observacoes: document.getElementById('contratoObservacoes').value,
+        pncpNumeroControle
     };
 
     try {
@@ -503,19 +617,40 @@ contratoForm?.addEventListener('submit', async function (e) {
 
         closeContratoModal();
         await loadContratos();
+
+        // If we were viewing a contract detail, refresh it
+        if (contratoDetalheAtual && id) {
+            const updated = contratosCache.find(c => String(c.id) === String(id));
+            if (updated) openContratoDetalhePage(updated);
+        }
     } catch (error) {
         alert(error.message);
         console.error(error);
     }
 });
 
-// Table action delegation (edit/delete)
+// Table action delegation (edit/delete/view) + number link
 contratosPageTableBody?.addEventListener('click', async function (e) {
+    // Handle clickable contract number
+    const numLink = e.target.closest('.contrato-numero-link');
+    if (numLink) {
+        e.preventDefault();
+        const id = numLink.dataset.contratoId;
+        const contrato = contratosCache.find(c => String(c.id) === String(id));
+        if (contrato) openContratoDetalhePage(contrato);
+        return;
+    }
+
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
 
     const action = btn.dataset.action;
     const id = btn.dataset.id;
+
+    if (action === 'ver-contrato') {
+        const contrato = contratosCache.find(c => String(c.id) === String(id));
+        if (contrato) openContratoDetalhePage(contrato);
+    }
 
     if (action === 'editar-contrato') {
         const contrato = contratosCache.find(c => String(c.id) === String(id));
@@ -608,7 +743,7 @@ function buildEditalRow(edital) {
 
     row.innerHTML = `
         <td>${edital.numero || '-'}${pncpTag}</td>
-        <td>${edital.orgao || '-'}</td>
+        <td><a href="#" class="edital-orgao-link" data-edital-id="${edital.id}">${edital.orgao || '-'}</a></td>
         <td>${formatEditalLocal(edital)}</td>
         <td>${edital.vigencia || '-'}</td>
         <td><span class="status ${sm.css}">${sm.label}</span></td>
@@ -915,20 +1050,753 @@ if (editalViewModal) {
 document.getElementById('editaisFilterStatus')?.addEventListener('change', applyEditaisFilters);
 document.getElementById('editaisFilterBusca')?.addEventListener('input', applyEditaisFilters);
 
-// Table actions (view/edit/delete)
+// ── Contrato Detalhe Page ──
+
+function openContratoDetalhePage(contrato) {
+    contratoDetalheAtual = contrato;
+
+    // Title & breadcrumb
+    const titleEl = document.getElementById('contratoDetalheTitle');
+    const breadcrumbEl = document.getElementById('contratoDetalheBreadcrumb');
+    if (titleEl) titleEl.textContent = contrato.numero || `Contrato #${contrato.id}`;
+    if (breadcrumbEl) breadcrumbEl.textContent = contrato.numero || 'Detalhes';
+
+    // Render view content
+    renderContratoDetalheView(contrato);
+
+    // Determine PNCP numero controle (from contract or from edital)
+    const pncpNum = contrato.pncpNumeroControle || contrato.editalPncpNumeroControle || null;
+
+    // Setup PNCP header link
+    const pncpLinkBtn = document.getElementById('contratoDetalhePncpLinkBtn');
+    if (pncpLinkBtn) {
+        if (pncpNum) {
+            const m = pncpNum.match(/^(\d+)-\d+-0*(\d+)\/(\d+)$/);
+            if (m) {
+                pncpLinkBtn.href = `https://pncp.gov.br/app/editais/${m[1]}/${m[3]}/${m[2]}`;
+                pncpLinkBtn.style.display = '';
+            } else {
+                pncpLinkBtn.style.display = 'none';
+            }
+        } else {
+            pncpLinkBtn.style.display = 'none';
+        }
+    }
+
+    // Reset to Detalhes tab
+    switchContratoDetalheTab('detalhes');
+
+    // Show/hide PNCP tabs
+    const hasPncp = !!pncpNum;
+    const tabItens = document.getElementById('contratoTabItens');
+    const tabArquivos = document.getElementById('contratoTabArquivos');
+    const resumoCards = document.getElementById('contratoDetalheResumoCards');
+    if (tabItens) tabItens.style.display = hasPncp ? '' : 'none';
+    if (tabArquivos) tabArquivos.style.display = hasPncp ? '' : 'none';
+    if (resumoCards) resumoCards.style.display = '' ; // Always show — valor do contrato is always useful
+
+    // Update value card always
+    const valCard = document.getElementById('contratoDetalheValorTotal');
+    if (valCard) valCard.textContent = contrato.valor ? formatCurrency(contrato.valor) : '-';
+
+    // Status card
+    const statusCard = document.getElementById('contratoDetalheStatusCard');
+    if (statusCard) {
+        const sm = getContratoStatusMeta(contrato.status);
+        statusCard.innerHTML = `<span class="status ${sm.css}" style="font-size:13px;">${sm.label}</span>`;
+    }
+
+    // Navigate
+    setActivePage('contrato-detalhe');
+
+    // Load PNCP data if available
+    if (hasPncp) {
+        loadPncpContratoData(contrato, pncpNum);
+    } else {
+        // No PNCP: set cards with contract-only data
+        const itensCount = document.getElementById('contratoDetalheItensCount');
+        const arqCount = document.getElementById('contratoDetalheArquivosCount');
+        if (itensCount) itensCount.textContent = '-';
+        if (arqCount) arqCount.textContent = '-';
+    }
+}
+
+function renderContratoDetalheView(contrato) {
+    const body = document.getElementById('contratoDetalheConteudo');
+    if (!body) return;
+
+    const sm = getContratoStatusMeta(contrato.status);
+    const editalLabel = contrato.editalNumero || (contrato.editalId ? `Edital #${contrato.editalId}` : '-');
+    const orgao = contrato.orgao || '-';
+    const local = [contrato.editalEstado, contrato.editalMunicipio].filter(Boolean).join(' / ') || '-';
+
+    body.innerHTML = `
+        <div class="edital-view-grid">
+            <div class="edital-view-item">
+                <span class="edital-view-label">Número do Contrato</span>
+                <span class="edital-view-value">${contrato.numero || '-'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Status</span>
+                <span class="edital-view-value"><span class="status ${sm.css}">${sm.label}</span></span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Edital vinculado</span>
+                <span class="edital-view-value">
+                    <a href="#" class="contrato-edital-link" data-edital-id="${contrato.editalId || ''}">${editalLabel}</a>
+                </span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Órgão</span>
+                <span class="edital-view-value">${orgao}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">UF / Município</span>
+                <span class="edital-view-value">${local}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Responsável</span>
+                <span class="edital-view-value">${contrato.responsavel || '-'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Data início</span>
+                <span class="edital-view-value">${formatDate(contrato.dataInicio)}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Data fim</span>
+                <span class="edital-view-value">${formatDate(contrato.dataFim)}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Valor</span>
+                <span class="edital-view-value">${formatCurrency(contrato.valor)}</span>
+            </div>
+            <div class="edital-view-item full">
+                <span class="edital-view-label">Objeto</span>
+                <span class="edital-view-value">${contrato.objeto || '-'}</span>
+            </div>
+            ${contrato.observacoes ? `<div class="edital-view-item full">
+                <span class="edital-view-label">Observações</span>
+                <span class="edital-view-value">${contrato.observacoes}</span>
+            </div>` : ''}
+        </div>
+    `;
+
+    // Edital link click handler
+    const editalLink = body.querySelector('.contrato-edital-link');
+    if (editalLink) {
+        editalLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const editalId = editalLink.dataset.editalId;
+            if (editalId) {
+                const edital = (editaisFullCache || []).find(ed => String(ed.id) === String(editalId));
+                if (edital) openEditalDetalhePage(edital);
+            }
+        });
+    }
+}
+
+async function loadPncpContratoData(contrato, pncpNumeroControle) {
+    const parsed = parsePncpNumeroControle(pncpNumeroControle);
+    if (!parsed) return;
+
+    const { cnpj, ano, sequencial } = parsed;
+
+    // Reset loading states
+    const itensCount = document.getElementById('contratoDetalheItensCount');
+    const arqCount = document.getElementById('contratoDetalheArquivosCount');
+    if (itensCount) itensCount.textContent = '...';
+    if (arqCount) arqCount.textContent = '...';
+
+    const itensBody = document.getElementById('contratoDetalheItensBody');
+    const arqBody = document.getElementById('contratoDetalheArquivosBody');
+    if (itensBody) itensBody.innerHTML = '<p class="edital-tab-placeholder"><i class="bx bx-loader-alt bx-spin"></i> Carregando itens...</p>';
+    if (arqBody) arqBody.innerHTML = '<p class="edital-tab-placeholder"><i class="bx bx-loader-alt bx-spin"></i> Carregando arquivos...</p>';
+
+    // Fetch in parallel
+    const [itensRes, arquivosRes] = await Promise.allSettled([
+        fetch(`/api/pncp/contratacao/${cnpj}/${ano}/${sequencial}/itens`).then(r => r.ok ? r.json() : []),
+        fetch(`/api/pncp/contratacao/${cnpj}/${ano}/${sequencial}/arquivos`).then(r => r.ok ? r.json() : [])
+    ]);
+
+    const itens = itensRes.status === 'fulfilled' ? itensRes.value : [];
+    const arquivos = arquivosRes.status === 'fulfilled' ? arquivosRes.value : [];
+
+    // Update summary counts
+    if (itensCount) itensCount.textContent = itens.length.toString();
+    if (arqCount) arqCount.textContent = arquivos.length.toString();
+
+    // Render tabs (reuse the same render functions with different target containers)
+    renderContratoItensTab(itens);
+    renderContratoArquivosTab(arquivos);
+}
+
+function renderContratoItensTab(itens) {
+    const body = document.getElementById('contratoDetalheItensBody');
+    if (!body) return;
+
+    if (!itens || itens.length === 0) {
+        body.innerHTML = '<p class="edital-tab-placeholder"><i class="bx bx-info-circle"></i> Nenhum item encontrado para esta contratação.</p>';
+        return;
+    }
+
+    const totalGeral = itens.reduce((sum, it) => sum + (it.valorTotal || 0), 0);
+
+    let html = `
+        <div style="overflow-x:auto;">
+        <table class="pncp-itens-table">
+            <thead>
+                <tr>
+                    <th class="col-num">#</th>
+                    <th>Descrição</th>
+                    <th>Tipo</th>
+                    <th class="col-qtd">Qtd</th>
+                    <th>Unidade</th>
+                    <th class="col-valor">Valor Unit.</th>
+                    <th class="col-valor">Valor Total</th>
+                    <th>Situação</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    for (const item of itens) {
+        const situacao = item.situacaoCompraItemNome || '-';
+        const situacaoClass = situacao.toLowerCase().includes('homologado') ? 'status completed' :
+            situacao.toLowerCase().includes('andamento') ? 'status process' : '';
+        html += `
+            <tr>
+                <td class="col-num">${item.numeroItem || '-'}</td>
+                <td>${item.descricao || '-'}</td>
+                <td>${item.materialOuServicoNome || '-'}</td>
+                <td class="col-qtd">${item.quantidade != null ? item.quantidade.toLocaleString('pt-BR') : '-'}</td>
+                <td>${item.unidadeMedida || '-'}</td>
+                <td class="col-valor">${item.valorUnitarioEstimado != null ? formatCurrencyBR(item.valorUnitarioEstimado) : '-'}</td>
+                <td class="col-valor">${item.valorTotal != null ? formatCurrencyBR(item.valorTotal) : '-'}</td>
+                <td>${situacaoClass ? `<span class="${situacaoClass}">${situacao}</span>` : situacao}</td>
+            </tr>
+        `;
+    }
+
+    html += `
+            <tr class="total-row">
+                <td colspan="6" style="text-align:right;">Total Estimado</td>
+                <td class="col-valor">${formatCurrencyBR(totalGeral)}</td>
+                <td></td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+    `;
+
+    body.innerHTML = html;
+}
+
+function renderContratoArquivosTab(arquivos) {
+    const body = document.getElementById('contratoDetalheArquivosBody');
+    if (!body) return;
+
+    if (!arquivos || arquivos.length === 0) {
+        body.innerHTML = '<p class="edital-tab-placeholder"><i class="bx bx-info-circle"></i> Nenhum arquivo encontrado para esta contratação.</p>';
+        return;
+    }
+
+    let html = '<div class="pncp-arquivos-grid">';
+
+    for (const arq of arquivos) {
+        const downloadUrl = arq.url || '#';
+        const titulo = arq.titulo || 'Documento sem título';
+        const tipo = arq.tipoDocumentoNome || arq.tipoDocumentoDescricao || 'Documento';
+        const dataPub = arq.dataPublicacaoPncp ? new Date(arq.dataPublicacaoPncp).toLocaleDateString('pt-BR') : '';
+
+        html += `
+            <a href="${downloadUrl}" target="_blank" rel="noopener" class="pncp-arquivo-card" title="Baixar: ${titulo}">
+                <div class="pncp-arquivo-icon">
+                    <i class='bx bxs-file-pdf'></i>
+                </div>
+                <div class="pncp-arquivo-info">
+                    <span class="pncp-arquivo-titulo">${titulo}</span>
+                    <span class="pncp-arquivo-tipo">${tipo}</span>
+                    ${dataPub ? `<span class="pncp-arquivo-data"><i class='bx bx-calendar' style="font-size:11px;"></i> ${dataPub}</span>` : ''}
+                </div>
+                <i class='bx bx-download pncp-arquivo-download-icon'></i>
+            </a>
+        `;
+    }
+
+    html += '</div>';
+    body.innerHTML = html;
+}
+
+// Tab switching for contract detail
+function switchContratoDetalheTab(tabName) {
+    document.querySelectorAll('#contratoDetalheTabs .edital-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.contratoTab === tabName);
+    });
+    document.querySelectorAll('.contrato-tab-content').forEach(content => {
+        content.classList.toggle('active', content.dataset.contratoTabContent === tabName);
+    });
+}
+
+// Attach tab click handlers for contract detail
+document.querySelectorAll('#contratoDetalheTabs .edital-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        switchContratoDetalheTab(btn.dataset.contratoTab);
+    });
+});
+
+// Editar button on contract detail
+document.getElementById('contratoDetalheEditarBtn')?.addEventListener('click', () => {
+    if (contratoDetalheAtual) {
+        openContratoModal(contratoDetalheAtual);
+    }
+});
+
+// Voltar button on contract detail
+document.getElementById('contratoDetalheVoltarBtn')?.addEventListener('click', () => {
+    setActivePage('contratos');
+});
+
+// ── Edital Detalhe Page ──
+let editalDetalheAtual = null;
+const editalDetalheView = document.getElementById('editalDetalheView');
+const editalDetalheEdit = document.getElementById('editalDetalheEdit');
+const editalDetalheConteudo = document.getElementById('editalDetalheConteudo');
+const editalDetalheForm = document.getElementById('editalDetalheForm');
+
+function openEditalDetalhePage(edital, editMode = false) {
+    editalDetalheAtual = edital;
+
+    // Update breadcrumb & title
+    const titleEl = document.getElementById('editalDetalheTitle');
+    const breadcrumbEl = document.getElementById('editalDetalheBreadcrumb');
+    if (titleEl) titleEl.textContent = edital.numero || 'Detalhes do Edital';
+    if (breadcrumbEl) breadcrumbEl.textContent = edital.numero || 'Detalhes';
+
+    renderEditalDetalheView(edital);
+
+    // Setup PNCP header link
+    const pncpLinkBtn = document.getElementById('editalDetalhePncpLinkBtn');
+    if (pncpLinkBtn) {
+        if (edital.pncpNumeroControle) {
+            const m = edital.pncpNumeroControle.match(/^(\d+)-\d+-0*(\d+)\/(\d+)$/);
+            if (m) {
+                pncpLinkBtn.href = `https://pncp.gov.br/app/editais/${m[1]}/${m[3]}/${m[2]}`;
+                pncpLinkBtn.style.display = '';
+            } else {
+                pncpLinkBtn.style.display = 'none';
+            }
+        } else {
+            pncpLinkBtn.style.display = 'none';
+        }
+    }
+
+    // Reset to Detalhes tab
+    switchEditalDetalheTab('detalhes');
+
+    // Show/hide PNCP tabs based on pncpNumeroControle
+    const hasPncp = !!edital.pncpNumeroControle;
+    const tabItens = document.getElementById('editalTabItens');
+    const tabArquivos = document.getElementById('editalTabArquivos');
+    const resumoCards = document.getElementById('editalDetalheResumoCards');
+    if (tabItens) tabItens.style.display = hasPncp ? '' : 'none';
+    if (tabArquivos) tabArquivos.style.display = hasPncp ? '' : 'none';
+    if (resumoCards) resumoCards.style.display = hasPncp ? '' : 'none';
+
+    if (editMode) {
+        showEditalDetalheEditMode(edital);
+    } else {
+        showEditalDetalheViewMode();
+    }
+
+    // Navigate to the page
+    setActivePage('edital-detalhe');
+
+    // Load PNCP data if available
+    if (hasPncp) {
+        loadPncpEditalData(edital);
+    }
+}
+
+// =================== PNCP Data Loading ===================
+
+function parsePncpNumeroControle(pncpNumeroControle) {
+    const m = pncpNumeroControle.match(/^(\d+)-\d+-0*(\d+)\/(\d+)$/);
+    if (!m) return null;
+    return { cnpj: m[1], sequencial: m[2], ano: m[3] };
+}
+
+async function loadPncpEditalData(edital) {
+    const parsed = parsePncpNumeroControle(edital.pncpNumeroControle);
+    if (!parsed) return;
+
+    const { cnpj, ano, sequencial } = parsed;
+
+    // Reset cards loading state
+    const valTotal = document.getElementById('editalDetalheValorTotal');
+    const itensCount = document.getElementById('editalDetalheItensCount');
+    const arqCount = document.getElementById('editalDetalheArquivosCount');
+    const sitPncp = document.getElementById('editalDetalheSituacaoPncp');
+    if (valTotal) valTotal.textContent = '...';
+    if (itensCount) itensCount.textContent = '...';
+    if (arqCount) arqCount.textContent = '...';
+    if (sitPncp) sitPncp.textContent = '...';
+
+    // Reset tab bodies to loading
+    const itensBody = document.getElementById('editalDetalheItensBody');
+    const arqBody = document.getElementById('editalDetalheArquivosBody');
+    if (itensBody) itensBody.innerHTML = '<p class="edital-tab-placeholder"><i class="bx bx-loader-alt bx-spin"></i> Carregando itens...</p>';
+    if (arqBody) arqBody.innerHTML = '<p class="edital-tab-placeholder"><i class="bx bx-loader-alt bx-spin"></i> Carregando arquivos...</p>';
+
+    // Fetch all in parallel
+    const [itensRes, arquivosRes, detalheRes] = await Promise.allSettled([
+        fetch(`/api/pncp/contratacao/${cnpj}/${ano}/${sequencial}/itens`).then(r => r.ok ? r.json() : []),
+        fetch(`/api/pncp/contratacao/${cnpj}/${ano}/${sequencial}/arquivos`).then(r => r.ok ? r.json() : []),
+        fetch(`/api/pncp/contratacao/${cnpj}/${ano}/${sequencial}`).then(r => r.ok ? r.json() : null)
+    ]);
+
+    const itens = itensRes.status === 'fulfilled' ? itensRes.value : [];
+    const arquivos = arquivosRes.status === 'fulfilled' ? arquivosRes.value : [];
+    const detalhe = detalheRes.status === 'fulfilled' ? detalheRes.value : null;
+
+    // Update summary cards
+    const totalEstimado = itens.reduce((sum, it) => sum + (it.valorTotal || 0), 0);
+    if (valTotal) valTotal.textContent = formatCurrencyBR(totalEstimado);
+    if (itensCount) itensCount.textContent = itens.length.toString();
+    if (arqCount) arqCount.textContent = arquivos.length.toString();
+    if (sitPncp) sitPncp.textContent = detalhe?.situacaoCompraNome || '-';
+
+    // Render tabs
+    renderPncpItensTab(itens);
+    renderPncpArquivosTab(arquivos);
+}
+
+function formatCurrencyBR(value) {
+    if (value == null || isNaN(value)) return 'R$ 0,00';
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function renderPncpItensTab(itens) {
+    const body = document.getElementById('editalDetalheItensBody');
+    if (!body) return;
+
+    if (!itens || itens.length === 0) {
+        body.innerHTML = '<p class="edital-tab-placeholder"><i class="bx bx-info-circle"></i> Nenhum item encontrado para esta contratação.</p>';
+        return;
+    }
+
+    const totalGeral = itens.reduce((sum, it) => sum + (it.valorTotal || 0), 0);
+
+    let html = `
+        <div style="overflow-x:auto;">
+        <table class="pncp-itens-table">
+            <thead>
+                <tr>
+                    <th class="col-num">#</th>
+                    <th>Descrição</th>
+                    <th>Tipo</th>
+                    <th class="col-qtd">Qtd</th>
+                    <th>Unidade</th>
+                    <th class="col-valor">Valor Unit.</th>
+                    <th class="col-valor">Valor Total</th>
+                    <th>Situação</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    for (const item of itens) {
+        const situacao = item.situacaoCompraItemNome || '-';
+        const situacaoClass = situacao.toLowerCase().includes('homologado') ? 'status completed' :
+            situacao.toLowerCase().includes('andamento') ? 'status process' : '';
+        html += `
+            <tr>
+                <td class="col-num">${item.numeroItem || '-'}</td>
+                <td>${item.descricao || '-'}</td>
+                <td>${item.materialOuServicoNome || '-'}</td>
+                <td class="col-qtd">${item.quantidade != null ? item.quantidade.toLocaleString('pt-BR') : '-'}</td>
+                <td>${item.unidadeMedida || '-'}</td>
+                <td class="col-valor">${item.valorUnitarioEstimado != null ? formatCurrencyBR(item.valorUnitarioEstimado) : '-'}</td>
+                <td class="col-valor">${item.valorTotal != null ? formatCurrencyBR(item.valorTotal) : '-'}</td>
+                <td>${situacaoClass ? `<span class="${situacaoClass}">${situacao}</span>` : situacao}</td>
+            </tr>
+        `;
+    }
+
+    html += `
+            <tr class="total-row">
+                <td colspan="6" style="text-align:right;">Total Estimado</td>
+                <td class="col-valor">${formatCurrencyBR(totalGeral)}</td>
+                <td></td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+    `;
+
+    body.innerHTML = html;
+}
+
+function renderPncpArquivosTab(arquivos) {
+    const body = document.getElementById('editalDetalheArquivosBody');
+    if (!body) return;
+
+    if (!arquivos || arquivos.length === 0) {
+        body.innerHTML = '<p class="edital-tab-placeholder"><i class="bx bx-info-circle"></i> Nenhum arquivo encontrado para esta contratação.</p>';
+        return;
+    }
+
+    let html = '<div class="pncp-arquivos-grid">';
+
+    for (const arq of arquivos) {
+        const downloadUrl = arq.url || '#';
+        const titulo = arq.titulo || 'Documento sem título';
+        const tipo = arq.tipoDocumentoNome || arq.tipoDocumentoDescricao || 'Documento';
+        const dataPub = arq.dataPublicacaoPncp ? new Date(arq.dataPublicacaoPncp).toLocaleDateString('pt-BR') : '';
+
+        html += `
+            <a href="${downloadUrl}" target="_blank" rel="noopener" class="pncp-arquivo-card" title="Baixar: ${titulo}">
+                <div class="pncp-arquivo-icon">
+                    <i class='bx bxs-file-pdf'></i>
+                </div>
+                <div class="pncp-arquivo-info">
+                    <span class="pncp-arquivo-titulo">${titulo}</span>
+                    <span class="pncp-arquivo-tipo">${tipo}</span>
+                    ${dataPub ? `<span class="pncp-arquivo-data"><i class='bx bx-calendar' style="font-size:11px;"></i> ${dataPub}</span>` : ''}
+                </div>
+                <i class='bx bx-download pncp-arquivo-download-icon'></i>
+            </a>
+        `;
+    }
+
+    html += '</div>';
+    body.innerHTML = html;
+}
+
+// Tab switching
+function switchEditalDetalheTab(tabName) {
+    document.querySelectorAll('#editalDetalheTabs .edital-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    document.querySelectorAll('.edital-tab-content').forEach(content => {
+        content.classList.toggle('active', content.dataset.tabContent === tabName);
+    });
+}
+
+// Attach tab click handlers
+document.querySelectorAll('#editalDetalheTabs .edital-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        switchEditalDetalheTab(btn.dataset.tab);
+    });
+});
+
+function renderEditalDetalheView(edital) {
+    if (!editalDetalheConteudo) return;
+    const sm = getEditalStatusMeta(edital.status);
+    const local = formatEditalLocal(edital);
+    const tipoOrgaoMap = { 'Município': 'Município', 'Municipio': 'Município', 'Estado': 'Estado', 'Federal': 'Federal' };
+    const tipoOrgao = tipoOrgaoMap[edital.tipoOrgao] || edital.tipoOrgao || '-';
+
+    editalDetalheConteudo.innerHTML = `
+        <div class="edital-view-grid">
+            <div class="edital-view-item">
+                <span class="edital-view-label">Número</span>
+                <span class="edital-view-value">${edital.numero || '-'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Status</span>
+                <span class="edital-view-value"><span class="status ${sm.css}">${sm.label}</span></span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Órgão</span>
+                <span class="edital-view-value">${edital.orgao || '-'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Tipo de órgão</span>
+                <span class="edital-view-value">${tipoOrgao}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">UF / Município</span>
+                <span class="edital-view-value">${local || '-'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Vigência</span>
+                <span class="edital-view-value">${edital.vigencia || '-'}</span>
+            </div>
+            <div class="edital-view-item full">
+                <span class="edital-view-label">Objeto</span>
+                <span class="edital-view-value">${edital.objeto || '-'}</span>
+            </div>
+            <div class="edital-view-item full">
+                <span class="edital-view-label">Resumo / Observações</span>
+                <span class="edital-view-value">${edital.resumo || '-'}</span>
+            </div>
+            ${edital.linkSistemaOrigem ? `<div class="edital-view-item full">
+                <span class="edital-view-label">Links</span>
+                <span class="edital-view-value edital-view-links">
+                    <a href="${edital.linkSistemaOrigem}" target="_blank" rel="noopener" class="sistema-origem-badge" style="font-size:12px;text-decoration:none;"><i class='bx bx-link-external'></i> Sistema de Origem</a>
+                </span>
+            </div>` : ''}
+            ${edital.pdfNome ? `<div class="edital-view-item full">
+                <span class="edital-view-label">PDF anexado</span>
+                <span class="edital-view-value"><i class='bx bxs-file-pdf' style="color:#e74c3c;"></i> ${edital.pdfNome}</span>
+            </div>` : ''}
+        </div>
+    `;
+}
+
+function showEditalDetalheViewMode() {
+    if (editalDetalheView) editalDetalheView.style.display = '';
+    if (editalDetalheEdit) editalDetalheEdit.style.display = 'none';
+}
+
+function showEditalDetalheEditMode(edital) {
+    if (!edital) edital = editalDetalheAtual;
+    if (!edital) return;
+    if (editalDetalheView) editalDetalheView.style.display = 'none';
+    if (editalDetalheEdit) editalDetalheEdit.style.display = '';
+
+    // Fill form
+    const f = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+    f('edDetalheNumero', edital.numero);
+    f('edDetalheOrgao', edital.orgao);
+    f('edDetalheTipoOrgao', edital.tipoOrgao || 'Município');
+    f('edDetalheEstado', edital.estado);
+    f('edDetalheMunicipio', edital.municipio);
+    f('edDetalheVigencia', edital.vigencia);
+    f('edDetalheObjeto', edital.objeto);
+    f('edDetalheResumo', edital.resumo);
+    f('edDetalheStatus', edital.status || 'aberto');
+
+    const pdfName = document.getElementById('editalDetalhePdfName');
+    if (pdfName) pdfName.textContent = edital.pdfNome || 'Importar PDF do edital';
+}
+
+// Editar button
+document.getElementById('editalDetalheEditarBtn')?.addEventListener('click', () => {
+    if (editalDetalheAtual) showEditalDetalheEditMode(editalDetalheAtual);
+});
+
+// Cancelar button (back to view mode)
+document.getElementById('editalDetalheCancelarBtn')?.addEventListener('click', () => {
+    showEditalDetalheViewMode();
+});
+
+// Voltar button (back to editais list)
+document.getElementById('editalDetalheVoltarBtn')?.addEventListener('click', () => {
+    setActivePage('editais');
+});
+
+// Form submit (save edit)
+if (editalDetalheForm) {
+    editalDetalheForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!editalDetalheAtual) return;
+        const payload = {
+            numero: document.getElementById('edDetalheNumero')?.value.trim() || '',
+            orgao: document.getElementById('edDetalheOrgao')?.value.trim() || '',
+            tipoOrgao: document.getElementById('edDetalheTipoOrgao')?.value || 'Município',
+            estado: document.getElementById('edDetalheEstado')?.value.trim().toUpperCase() || '',
+            municipio: document.getElementById('edDetalheMunicipio')?.value.trim() || '',
+            vigencia: document.getElementById('edDetalheVigencia')?.value.trim() || '',
+            objeto: document.getElementById('edDetalheObjeto')?.value.trim() || '',
+            resumo: document.getElementById('edDetalheResumo')?.value.trim() || '',
+            status: document.getElementById('edDetalheStatus')?.value || 'aberto'
+        };
+        try {
+            const response = await fetch(`/api/editais/${editalDetalheAtual.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error('Falha ao salvar edital');
+            // Refresh data
+            await loadEditais();
+            await loadEditaisForSelect();
+            // Update current edital with new data
+            const updated = editaisFullCache.find(e => e.id === editalDetalheAtual.id);
+            if (updated) {
+                editalDetalheAtual = updated;
+                renderEditalDetalheView(updated);
+                const titleEl = document.getElementById('editalDetalheTitle');
+                const breadcrumbEl = document.getElementById('editalDetalheBreadcrumb');
+                if (titleEl) titleEl.textContent = updated.numero || 'Detalhes do Edital';
+                if (breadcrumbEl) breadcrumbEl.textContent = updated.numero || 'Detalhes';
+            }
+            showEditalDetalheViewMode();
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao salvar edital.');
+        }
+    });
+}
+
+// PDF analysis on detail page
+const editalDetalhePdfInput = document.getElementById('editalDetalhePdfInput');
+const analisarEditalDetalheBtn = document.getElementById('analisarEditalDetalheBtn');
+
+if (editalDetalhePdfInput) {
+    editalDetalhePdfInput.addEventListener('change', () => {
+        const file = editalDetalhePdfInput.files && editalDetalhePdfInput.files[0];
+        const pdfName = document.getElementById('editalDetalhePdfName');
+        if (pdfName) pdfName.textContent = file ? file.name : 'Importar PDF do edital';
+    });
+}
+
+if (analisarEditalDetalheBtn) {
+    analisarEditalDetalheBtn.addEventListener('click', async () => {
+        const file = editalDetalhePdfInput && editalDetalhePdfInput.files ? editalDetalhePdfInput.files[0] : null;
+        if (!file) { alert('Selecione um PDF para analisar.'); return; }
+        analisarEditalDetalheBtn.disabled = true;
+        analisarEditalDetalheBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Analisando...';
+        const formData = new FormData();
+        formData.append('editalPdf', file);
+        try {
+            const response = await fetch('/api/editais/analisar', { method: 'POST', body: formData });
+            if (!response.ok) throw new Error('Falha ao analisar');
+            const data = await response.json();
+            const f = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+            f('edDetalheNumero', data.numero);
+            f('edDetalheOrgao', data.orgao);
+            f('edDetalheTipoOrgao', data.tipoOrgao);
+            f('edDetalheEstado', data.estado);
+            f('edDetalheMunicipio', data.municipio);
+            f('edDetalheVigencia', data.vigencia);
+            f('edDetalheObjeto', data.objeto);
+            f('edDetalheResumo', data.resumo);
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao analisar PDF.');
+        } finally {
+            analisarEditalDetalheBtn.disabled = false;
+            analisarEditalDetalheBtn.innerHTML = '<i class="bx bxs-analyse"></i> Analisar PDF';
+        }
+    });
+}
+
+// Table actions (view/edit/delete) + Órgão link
 if (editaisTableBody) {
     editaisTableBody.addEventListener('click', async (e) => {
+        // Handle Órgão link click
+        const orgaoLink = e.target.closest('.edital-orgao-link');
+        if (orgaoLink) {
+            e.preventDefault();
+            const id = orgaoLink.dataset.editalId;
+            const edital = editaisFullCache.find(item => String(item.id) === String(id));
+            if (edital) openEditalDetalhePage(edital);
+            return;
+        }
+
         const button = e.target.closest('button[data-action]');
         if (!button) return;
         const action = button.dataset.action;
         const id = button.dataset.id;
         if (action === 'view') {
             const edital = editaisFullCache.find(item => String(item.id) === String(id));
-            if (edital) openEditalViewModal(edital);
+            if (edital) openEditalDetalhePage(edital);
         }
         if (action === 'edit') {
             const edital = editaisFullCache.find(item => String(item.id) === String(id));
-            if (edital) openEditalModal(edital);
+            if (edital) openEditalDetalhePage(edital, true);
         }
         if (action === 'delete') {
             if (!confirm('Deseja excluir este edital?')) return;
@@ -1639,13 +2507,14 @@ const pncpDetalheModal = document.getElementById('pncpDetalheModal');
 const pncpDetalheConteudo = document.getElementById('pncpDetalheConteudo');
 const pncpImportarDetalheBtn = document.getElementById('pncpImportarDetalheBtn');
 
-let pncpCache = [];              // Results from current search
-let pncpCacheOriginal = [];      // Unsorted copy of results
+let pncpCache = [];              // Full results from search (ALL pages)
+let pncpCacheOriginal = [];      // Unsorted copy of ALL results
 let pncpCurrentPage = 1;
 let pncpTotalPages = 0;
 let pncpTotalRegistros = 0;
 let pncpLastFilters = {};        // Last search params
 let pncpDetalheAtual = null;     // Currently viewed contratação detail
+const PNCP_PAGE_SIZE = 20;      // Client-side page size
 
 // Map PNCP items to already-imported editais via pncpNumeroControle
 function getPncpImportedSet() {
@@ -1744,13 +2613,14 @@ function buildPncpRow(item) {
     const numCompra = item.numeroCompra || item.numeroControlePNCP || '-';
 
     row.innerHTML = `
+        <td class="pncp-select-cell"><input type="checkbox" class="pncp-row-check" ${isImported ? 'disabled' : ''}></td>
         <td>${badgeHtml}</td>
         <td>${numCompra}</td>
         <td class="pncp-objeto-cell" title="${orgao}">${orgao}${medicoTag}</td>
         <td>${formatPncpLocal(item)}</td>
         <td>${modalidade}</td>
         <td class="pncp-valor">${valorStr}</td>
-        <td><span class="status ${sitCss}">${sitLabel}</span></td>
+        <td><span class="pncp-situacao ${sitCss}">${sitLabel}</span></td>
         <td>
             <div class="actions">
                 <button class="btn-icon" data-pncp-action="ver" title="Ver detalhes">
@@ -1779,14 +2649,18 @@ function sortPncpCache(field, dir) {
         pncpCache = [...pncpCacheOriginal];
         const asc = dir === 'asc' ? 1 : -1;
         pncpCache.sort((a, b) => {
+            if (field === 'numCompra') return asc * (a.numeroCompra || a.numeroControlePNCP || '').localeCompare(b.numeroCompra || b.numeroControlePNCP || '', 'pt-BR', { numeric: true });
             if (field === 'valor') return asc * ((a.valorTotalEstimado || 0) - (b.valorTotalEstimado || 0));
             if (field === 'orgao') return asc * (a.orgaoEntidade?.razaoSocial || '').localeCompare(b.orgaoEntidade?.razaoSocial || '', 'pt-BR');
             if (field === 'municipio') return asc * formatPncpLocal(a).localeCompare(formatPncpLocal(b), 'pt-BR');
             return 0;
         });
     }
+    pncpCurrentPage = 1;
+    pncpTotalPages = Math.ceil(getFilteredPncpItems(pncpCache).length / PNCP_PAGE_SIZE);
     renderPncpTable(pncpCache);
     updatePncpSortIcons();
+    updatePncpPagination();
 }
 
 function updatePncpSortIcons() {
@@ -1816,32 +2690,83 @@ function handlePncpHeaderSort(field) {
 }
 
 // Render PNCP results table
+let pncpMedicoFilterOn = false;
+
+function getFilteredPncpItems(items) {
+    if (!pncpMedicoFilterOn) return items;
+    return items.filter(i => isPncpMedico(i));
+}
+
 function renderPncpTable(items) {
     if (!pncpTableBody) return;
-    if (!items || items.length === 0) {
-        pncpTableBody.innerHTML = '<tr><td colspan="8" class="pncp-loading">Nenhuma contratação encontrada para os filtros selecionados.</td></tr>';
+    const filtered = getFilteredPncpItems(items);
+
+    // Update total pages based on filtered items
+    pncpTotalPages = Math.ceil(filtered.length / PNCP_PAGE_SIZE);
+    if (pncpCurrentPage > pncpTotalPages && pncpTotalPages > 0) pncpCurrentPage = pncpTotalPages;
+    if (pncpCurrentPage < 1) pncpCurrentPage = 1;
+
+    // Slice for current page
+    const startIdx = (pncpCurrentPage - 1) * PNCP_PAGE_SIZE;
+    const pageItems = filtered.slice(startIdx, startIdx + PNCP_PAGE_SIZE);
+
+    if (!pageItems || pageItems.length === 0) {
+        pncpTableBody.innerHTML = '<tr><td colspan="9" class="pncp-loading">Nenhuma contratação encontrada para os filtros selecionados.</td></tr>';
+        updatePncpSelectionUI();
+        updatePncpPagination();
         return;
     }
     pncpTableBody.innerHTML = '';
-    items.forEach(item => pncpTableBody.appendChild(buildPncpRow(item)));
+    pageItems.forEach(item => pncpTableBody.appendChild(buildPncpRow(item)));
+    // Reset select-all
+    const selAll = document.getElementById('pncpSelectAll');
+    if (selAll) selAll.checked = false;
+    updatePncpSelectionUI();
+    updatePncpPagination();
+}
+
+function updatePncpSelectionUI() {
+    const checks = pncpTableBody ? pncpTableBody.querySelectorAll('.pncp-row-check:checked:not(:disabled)') : [];
+    const count = checks.length;
+    const btn = document.getElementById('pncpImportarSelecionadosBtn');
+    const span = document.getElementById('pncpSelCount');
+    if (btn) btn.style.display = count > 0 ? '' : 'none';
+    if (span) span.textContent = count;
 }
 
 // Update summary cards
 function updatePncpSummary() {
     const imported = getPncpImportedSet();
-    const importedCount = pncpCache.filter(i => imported.has(i.numeroControlePNCP || '')).length;
-    const novos = pncpCache.length - importedCount;
+    const filtered = getFilteredPncpItems(pncpCache);
+    const importedCount = filtered.filter(i => imported.has(i.numeroControlePNCP || '')).length;
+    const novos = filtered.length - importedCount;
 
     const el = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
-    el('pncpResumoResultados', pncpTotalRegistros);
+    el('pncpResumoResultados', filtered.length);
     el('pncpResumoImportados', importedCount);
     el('pncpResumoNovos', novos);
     el('pncpResumoPaginas', pncpTotalPages);
+
+    // Total count label (shown when filter active)
+    const totalLabel = document.getElementById('pncpResumoTotalLabel');
+    if (totalLabel) {
+        if (pncpMedicoFilterOn && pncpCacheOriginal.length !== filtered.length) {
+            totalLabel.textContent = `(de ${pncpCacheOriginal.length} total)`;
+            totalLabel.style.display = '';
+        } else {
+            totalLabel.style.display = 'none';
+        }
+    }
 
     // Show/hide "Importar novos" button
     if (pncpImportarTodosBtn) {
         pncpImportarTodosBtn.style.display = novos > 0 ? '' : 'none';
     }
+
+    // Show/hide médico toggle (results header) when there are médico results
+    const hasMedico = pncpCache.some(i => isPncpMedico(i));
+    const toggleLabel2 = document.getElementById('pncpToggleMedicoLabel2');
+    if (toggleLabel2) toggleLabel2.style.display = hasMedico ? '' : 'none';
 }
 
 // Update pagination
@@ -1857,10 +2782,11 @@ function updatePncpPagination() {
     if (next) next.disabled = pncpCurrentPage >= pncpTotalPages;
 }
 
-// Main search function
+// Main search function — fetches ALL pages from PNCP for global filter/sort
 async function buscarPncp(pagina = 1) {
     if (!pncpTableBody) return;
 
+    const pncpIdInput = (document.getElementById('pncpIdContratacao')?.value || '').trim();
     const dataInicial = document.getElementById('pncpDataInicial')?.value;
     const dataFinal = document.getElementById('pncpDataFinal')?.value;
     const codigoModalidade = document.getElementById('pncpModalidade')?.value;
@@ -1868,6 +2794,39 @@ async function buscarPncp(pagina = 1) {
     const codigoMunicipioIbge = document.getElementById('pncpMunicipio')?.value || '';
     const cnpj = document.getElementById('pncpCnpj')?.value.replace(/[.\-\/]/g, '') || '';
     const buscaTexto = (document.getElementById('pncpBuscaTexto')?.value || '').toLowerCase().trim();
+
+    // Direct lookup by PNCP ID
+    if (pncpIdInput) {
+        const parsed = parsePncpNumeroControle(pncpIdInput);
+        if (!parsed) {
+            alert('Id contratação PNCP inválido.\nFormato esperado: CNPJ-TIPO-SEQUENCIAL/ANO\nEx: 17097791000112-1-000066/2025');
+            return;
+        }
+        if (pncpResultadosCard) pncpResultadosCard.style.display = '';
+        pncpTableBody.innerHTML = '<tr><td colspan="9" class="pncp-loading"><i class="bx bx-loader-alt bx-spin"></i> Buscando contratação...</td></tr>';
+        if (pncpBuscarBtn) { pncpBuscarBtn.disabled = true; pncpBuscarBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Buscando...'; }
+        try {
+            const response = await fetch(`/api/pncp/contratacao/${parsed.cnpj}/${parsed.ano}/${parsed.sequencial}`);
+            if (!response.ok) throw new Error('Contratação não encontrada no PNCP');
+            const item = await response.json();
+            const items = [item];
+            pncpCache = items;
+            pncpCacheOriginal = [...items];
+            pncpTotalRegistros = 1;
+            pncpCurrentPage = 1;
+            pncpSortField = ''; pncpSortDir = '';
+            renderPncpTable(pncpCache);
+            updatePncpSummary();
+            updatePncpPagination();
+            updatePncpSortIcons();
+        } catch (error) {
+            console.error('Erro PNCP:', error);
+            pncpTableBody.innerHTML = `<tr><td colspan="9" class="pncp-loading"><i class='bx bxs-error-circle' style="color:#e74c3c;"></i> ${error.message}</td></tr>`;
+        } finally {
+            if (pncpBuscarBtn) { pncpBuscarBtn.disabled = false; pncpBuscarBtn.innerHTML = '<i class="bx bx-search"></i> Buscar no PNCP'; }
+        }
+        return;
+    }
 
     if (!dataInicial || !dataFinal) {
         alert('Preencha Data inicial e Data final.');
@@ -1881,26 +2840,24 @@ async function buscarPncp(pagina = 1) {
 
     // Show loading
     if (pncpResultadosCard) pncpResultadosCard.style.display = '';
-    pncpTableBody.innerHTML = '<tr><td colspan="8" class="pncp-loading"><i class="bx bx-loader-alt bx-spin"></i>Consultando PNCP...</td></tr>';
+    pncpTableBody.innerHTML = '<tr><td colspan="9" class="pncp-loading"><i class="bx bx-loader-alt bx-spin"></i> Carregando todas as contratações do PNCP...</td></tr>';
 
     if (pncpBuscarBtn) {
         pncpBuscarBtn.disabled = true;
-        pncpBuscarBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Buscando...';
+        pncpBuscarBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Carregando...';
     }
 
     try {
         const params = new URLSearchParams({
             dataInicial: pncpLastFilters.dataInicial,
             dataFinal: pncpLastFilters.dataFinal,
-            pagina,
-            tamanhoPagina: 15,
         });
         if (codigoModalidade) params.set('codigoModalidadeContratacao', codigoModalidade);
         if (uf) params.set('uf', uf);
         if (codigoMunicipioIbge) params.set('codigoMunicipioIbge', codigoMunicipioIbge);
         if (cnpj) params.set('cnpj', cnpj);
 
-        const response = await fetch(`/api/pncp/contratacoes?${params.toString()}`);
+        const response = await fetch(`/api/pncp/contratacoes/todas?${params.toString()}`);
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
             throw new Error(err.detalhe || err.erro || 'Erro ao consultar PNCP');
@@ -1923,22 +2880,21 @@ async function buscarPncp(pagina = 1) {
 
         pncpCache = items;
         pncpCacheOriginal = [...items];
-        pncpCurrentPage = resultado.numeroPagina || pagina;
-        pncpTotalPages = resultado.totalPaginas || 0;
-        pncpTotalRegistros = resultado.totalRegistros || 0;
+        pncpTotalRegistros = items.length;
+        pncpCurrentPage = 1;
 
-        // Aplicar ordenação ativa
-        if (pncpSortField) {
-            sortPncpCache(pncpSortField, pncpSortDir);
-        } else {
-            renderPncpTable(pncpCache);
+        // Ordenar por maior valor por padrão
+        if (!pncpSortField) {
+            pncpSortField = 'valor';
+            pncpSortDir = 'desc';
         }
+        sortPncpCache(pncpSortField, pncpSortDir);
         updatePncpSummary();
         updatePncpPagination();
 
     } catch (error) {
         console.error('Erro PNCP:', error);
-        pncpTableBody.innerHTML = `<tr><td colspan="8" class="pncp-loading"><i class='bx bxs-error-circle' style="color:#e74c3c;"></i>${error.message}</td></tr>`;
+        pncpTableBody.innerHTML = `<tr><td colspan="9" class="pncp-loading"><i class='bx bxs-error-circle' style="color:#e74c3c;"></i> ${error.message}</td></tr>`;
     } finally {
         if (pncpBuscarBtn) {
             pncpBuscarBtn.disabled = false;
@@ -2201,17 +3157,28 @@ if (pncpLimparBtn) {
         pncpSortDir = '';
         pncpTotalPages = 0;
         pncpTotalRegistros = 0;
+        pncpMedicoFilterOn = false;
+        const medicoToggle2 = document.getElementById('pncpToggleMedico2');
+        if (medicoToggle2) medicoToggle2.checked = false;
         if (pncpResultadosCard) pncpResultadosCard.style.display = 'none';
         updatePncpSummary();
     });
 }
 
-// Pagination
+// Pagination (client-side)
 document.getElementById('pncpPrevPage')?.addEventListener('click', () => {
-    if (pncpCurrentPage > 1) buscarPncp(pncpCurrentPage - 1);
+    if (pncpCurrentPage > 1) {
+        pncpCurrentPage--;
+        renderPncpTable(pncpCache);
+        updatePncpPagination();
+    }
 });
 document.getElementById('pncpNextPage')?.addEventListener('click', () => {
-    if (pncpCurrentPage < pncpTotalPages) buscarPncp(pncpCurrentPage + 1);
+    if (pncpCurrentPage < pncpTotalPages) {
+        pncpCurrentPage++;
+        renderPncpTable(pncpCache);
+        updatePncpPagination();
+    }
 });
 
 // Table actions (ver / importar)
@@ -2243,11 +3210,12 @@ if (pncpTableBody) {
     });
 }
 
-// Import all new
+// Import all new (from filtered results, all pages)
 if (pncpImportarTodosBtn) {
     pncpImportarTodosBtn.addEventListener('click', async () => {
         const imported = getPncpImportedSet();
-        const novos = pncpCache.filter(i => !imported.has(i.numeroControlePNCP || ''));
+        const filtered = getFilteredPncpItems(pncpCache);
+        const novos = filtered.filter(i => !imported.has(i.numeroControlePNCP || ''));
         if (novos.length === 0) {
             alert('Todas as contratações já foram importadas.');
             return;
@@ -2271,6 +3239,71 @@ if (pncpImportarTodosBtn) {
         alert(`${importados} contratação(ões) importada(s) com sucesso!`);
     });
 }
+
+// Select-all checkbox
+document.getElementById('pncpSelectAll')?.addEventListener('change', (e) => {
+    const checked = e.target.checked;
+    if (!pncpTableBody) return;
+    pncpTableBody.querySelectorAll('.pncp-row-check:not(:disabled)').forEach(cb => { cb.checked = checked; });
+    updatePncpSelectionUI();
+});
+
+// Row checkbox changes
+if (pncpTableBody) {
+    pncpTableBody.addEventListener('change', (e) => {
+        if (e.target.classList.contains('pncp-row-check')) {
+            updatePncpSelectionUI();
+            // Sync select-all
+            const all = pncpTableBody.querySelectorAll('.pncp-row-check:not(:disabled)');
+            const allChecked = pncpTableBody.querySelectorAll('.pncp-row-check:checked:not(:disabled)');
+            const selAll = document.getElementById('pncpSelectAll');
+            if (selAll) selAll.checked = all.length > 0 && all.length === allChecked.length;
+        }
+    });
+}
+
+// Bulk import selected
+document.getElementById('pncpImportarSelecionadosBtn')?.addEventListener('click', async () => {
+    if (!pncpTableBody) return;
+    const rows = pncpTableBody.querySelectorAll('tr');
+    const selected = [];
+    rows.forEach(row => {
+        const cb = row.querySelector('.pncp-row-check');
+        if (cb && cb.checked && !cb.disabled && row._pncpItem) {
+            selected.push(row._pncpItem);
+        }
+    });
+    if (selected.length === 0) return;
+    if (!confirm(`Importar ${selected.length} contratação(ões) selecionada(s) como editais?`)) return;
+
+    const btn = document.getElementById('pncpImportarSelecionadosBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Importando...'; }
+
+    let importados = 0;
+    for (const item of selected) {
+        const ok = await importarPncpComoEdital(item);
+        if (ok) importados++;
+    }
+
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bx bxs-download"></i> Importar selecionados (<span id="pncpSelCount">0</span>)'; }
+    renderPncpTable(pncpCache);
+    updatePncpSummary();
+    alert(`${importados} contratação(ões) importada(s) com sucesso!`);
+});
+
+// Médico toggle filter
+function syncMedicoToggles(checked) {
+    pncpMedicoFilterOn = checked;
+    const t2 = document.getElementById('pncpToggleMedico2');
+    if (t2) t2.checked = checked;
+    pncpCurrentPage = 1;
+    pncpTotalPages = Math.ceil(getFilteredPncpItems(pncpCache).length / PNCP_PAGE_SIZE);
+    renderPncpTable(pncpCache);
+    updatePncpSummary();
+    updatePncpPagination();
+    updatePncpSortIcons();
+}
+document.getElementById('pncpToggleMedico2')?.addEventListener('change', (e) => syncMedicoToggles(e.target.checked));
 
 // Detail modal buttons
 if (pncpImportarDetalheBtn) {

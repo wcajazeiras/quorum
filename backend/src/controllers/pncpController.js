@@ -30,6 +30,31 @@ const pncpController = {
   },
 
   /**
+   * GET /api/pncp/contratacoes/todas
+   * Buscar TODAS as contratações (todas as páginas) para filtro/ordenação global
+   */
+  async buscarTodasContratacoes(req, res) {
+    try {
+      const { dataInicial, dataFinal, codigoModalidadeContratacao, uf, codigoMunicipioIbge, cnpj } = req.query;
+
+      if (!dataInicial || !dataFinal) {
+        return res.status(400).json({ erro: 'Parâmetros obrigatórios: dataInicial, dataFinal' });
+      }
+
+      const resultado = await PncpService.buscarTodasContratacoes({
+        dataInicial, dataFinal,
+        codigoModalidadeContratacao,
+        uf, codigoMunicipioIbge, cnpj
+      });
+
+      res.json(resultado);
+    } catch (error) {
+      console.error('Erro ao buscar todas contratações PNCP:', error.message);
+      res.status(502).json({ erro: 'Falha ao consultar PNCP', detalhe: error.message });
+    }
+  },
+
+  /**
    * GET /api/pncp/propostas
    * Buscar contratações com propostas abertas no PNCP
    */
@@ -73,6 +98,36 @@ const pncpController = {
     } catch (error) {
       console.error('Erro ao buscar contratação PNCP:', error.message);
       res.status(502).json({ erro: 'Falha ao consultar PNCP', detalhe: error.message });
+    }
+  },
+
+  /**
+   * GET /api/pncp/contratacao/:cnpj/:ano/:sequencial/itens
+   * Buscar itens de uma contratação
+   */
+  async buscarItens(req, res) {
+    try {
+      const { cnpj, ano, sequencial } = req.params;
+      const resultado = await PncpService.buscarItens(cnpj, ano, sequencial);
+      res.json(resultado);
+    } catch (error) {
+      console.error('Erro ao buscar itens PNCP:', error.message);
+      res.status(502).json({ erro: 'Falha ao consultar itens PNCP', detalhe: error.message });
+    }
+  },
+
+  /**
+   * GET /api/pncp/contratacao/:cnpj/:ano/:sequencial/arquivos
+   * Buscar arquivos de uma contratação
+   */
+  async buscarArquivos(req, res) {
+    try {
+      const { cnpj, ano, sequencial } = req.params;
+      const resultado = await PncpService.buscarArquivos(cnpj, ano, sequencial);
+      res.json(resultado);
+    } catch (error) {
+      console.error('Erro ao buscar arquivos PNCP:', error.message);
+      res.status(502).json({ erro: 'Falha ao consultar arquivos PNCP', detalhe: error.message });
     }
   },
 
