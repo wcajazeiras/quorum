@@ -17,7 +17,8 @@ class ContratosController {
   // POST /api/contratos - Criar novo contrato
   async criar(req, res) {
     try {
-      const contrato = await ContratosService.criarContrato(req.body);
+      const { editalId, dataInicio, dataFim } = req.body;
+      const contrato = await ContratosService.criarContrato(editalId, dataInicio, dataFim);
       res.status(201).json(contrato);
     } catch (erro) {
       res.status(400).json({ erro: erro.message });
@@ -35,17 +36,6 @@ class ContratosController {
     }
   }
 
-  // PUT /api/contratos/:id - Atualizar contrato
-  async atualizar(req, res) {
-    try {
-      const { id } = req.params;
-      const contrato = await ContratosService.atualizarContrato(id, req.body);
-      res.json(contrato);
-    } catch (erro) {
-      res.status(400).json({ erro: erro.message });
-    }
-  }
-
   // DELETE /api/contratos/:id - Deletar contrato
   async deletar(req, res) {
     try {
@@ -54,21 +44,6 @@ class ContratosController {
       res.json(resultado);
     } catch (erro) {
       res.status(400).json({ erro: erro.message });
-    }
-  }
-
-  // GET /api/contratos/proximo-numero/:editalId - Gerar próximo número de contrato
-  async proximoNumero(req, res) {
-    try {
-      const Contrato = require('../models/Contrato');
-      const ano = new Date().getFullYear();
-      const maiorSeq = await Contrato.buscarMaiorSequencialAno(ano);
-      const proximo = maiorSeq + 1;
-      const numero = `CT-${String(proximo).padStart(3, '0')}/${ano}`;
-      const contratosEdital = await Contrato.contarPorEdital(req.params.editalId);
-      res.json({ numero, sequencial: proximo, contratosExistentes: contratosEdital });
-    } catch (erro) {
-      res.status(500).json({ erro: erro.message });
     }
   }
 }

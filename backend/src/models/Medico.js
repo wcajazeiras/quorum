@@ -5,15 +5,12 @@ const db = require('../config/database');
 
 class Medico {
   // Criar novo médico
-  static criar(nome, especialidade, crm, telefone, email, uf, municipio, status) {
+  static criar(nome, especialidade) {
     return new Promise((resolve, reject) => {
-      const sql = `
-        INSERT INTO medicos (nome, especialidade, crm, telefone, email, uf, municipio, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      db.run(sql, [nome, especialidade, crm, telefone, email, uf, municipio, status], function(err) {
+      const sql = 'INSERT INTO medicos (nome, especialidade) VALUES (?, ?)';
+      db.run(sql, [nome, especialidade], function(err) {
         if (err) reject(err);
-        else resolve({ id: this.lastID, nome, especialidade, crm, telefone, email, uf, municipio, status });
+        else resolve({ id: this.lastID, nome, especialidade });
       });
     });
   }
@@ -37,28 +34,6 @@ class Medico {
         if (err) reject(err);
         else resolve(row);
       });
-    });
-  }
-
-  // Atualizar médico
-  static atualizar(id, nome, especialidade, crm, telefone, email, uf, municipio, status) {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        UPDATE medicos
-        SET nome = ?, especialidade = ?, crm = ?, telefone = ?, email = ?, uf = ?, municipio = ?, status = ?
-        WHERE id = ?
-      `;
-      db.run(
-        sql,
-        [nome, especialidade, crm, telefone, email, uf, municipio, status, id],
-        function(err) {
-          if (err) {
-            reject(err);
-            return;
-          }
-          resolve({ id, nome, especialidade, crm, telefone, email, uf, municipio, status });
-        }
-      );
     });
   }
 

@@ -162,18 +162,80 @@ db.serialize(() => {
   `);
 
   ensureColumn('plantoes', 'contratoId', 'INTEGER');
+  ensureColumn('plantoes', 'municipio', 'TEXT');
+  ensureColumn('plantoes', 'local', 'TEXT');
 
-  // Tabela de Atendimentos
+  // Tabela de Itens do Contrato (cache local dos itens PNCP)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS contrato_itens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contratoId INTEGER NOT NULL,
+      numeroItem INTEGER,
+      descricao TEXT,
+      materialOuServico TEXT,
+      quantidade REAL,
+      unidadeMedida TEXT,
+      valorUnitario REAL,
+      valorTotal REAL,
+      situacao TEXT,
+      dataCriacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (contratoId) REFERENCES contratos(id)
+    )
+  `);
+
+  // Tabela de Locais de Atendimento (vinculados a contratos e itens PNCP)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS locais_atendimento (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contratoId INTEGER NOT NULL,
+      contratoItemId INTEGER,
+      nome TEXT NOT NULL,
+      municipio TEXT,
+      uf TEXT,
+      endereco TEXT,
+      ativo INTEGER DEFAULT 1,
+      dataCriacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (contratoId) REFERENCES contratos(id),
+      FOREIGN KEY (contratoItemId) REFERENCES contrato_itens(id)
+    )
+  `);
+
+  // Campos de programação do local de atendimento
+  ensureColumn('locais_atendimento', 'cargaHorariaDiaria', 'REAL');
+  ensureColumn('locais_atendimento', 'diasSemana', 'TEXT');
+  ensureColumn('locais_atendimento', 'horasSemanais', 'REAL');
+  ensureColumn('locais_atendimento', 'vagasProfissionais', 'INTEGER DEFAULT 1');
+  ensureColumn('locais_atendimento', 'dataInicioProgramacao', 'DATE');
+  ensureColumn('locais_atendimento', 'dataFimProgramacao', 'DATE');
+
+  ensureColumn('plantoes', 'localAtendimentoId', 'INTEGER');
+
+  // Campos de confirmação do plantão
+  ensureColumn('plantoes', 'confirmado', 'INTEGER DEFAULT 0');
+  ensureColumn('plantoes', 'dataConfirmacao', 'DATETIME');
+
+  // Tabela de Atendimentos (execução de plantões e produtividade)
   db.run(`
     CREATE TABLE IF NOT EXISTS atendimentos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       medicoId INTEGER NOT NULL,
       data DATE NOT NULL,
-      descricao TEXT NOT NULL,
+      descricao TEXT,
       dataCriacao DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (medicoId) REFERENCES medicos(id)
     )
   `);
+
+  ensureColumn('atendimentos', 'plantaoId', 'INTEGER');
+  ensureColumn('atendimentos', 'localAtendimentoId', 'INTEGER');
+  ensureColumn('atendimentos', 'contratoId', 'INTEGER');
+  ensureColumn('atendimentos', 'horaInicio', 'TEXT');
+  ensureColumn('atendimentos', 'horaFim', 'TEXT');
+  ensureColumn('atendimentos', 'cargaHorariaRealizada', 'REAL');
+  ensureColumn('atendimentos', 'pacientesAtendidos', 'INTEGER DEFAULT 0');
+  ensureColumn('atendimentos', 'procedimentos', 'TEXT');
+  ensureColumn('atendimentos', 'status', "TEXT DEFAULT 'pendente'");
+  ensureColumn('atendimentos', 'observacoes', 'TEXT');
 });
 
 function seedSampleData() {

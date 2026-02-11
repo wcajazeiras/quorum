@@ -17,17 +17,8 @@ class MedicosController {
   // POST /api/medicos - Criar novo médico
   async criar(req, res) {
     try {
-      const { nome, especialidade, crm, telefone, email, uf, municipio, status } = req.body;
-      const medico = await MedicosService.criarMedico({
-        nome,
-        especialidade,
-        crm,
-        telefone,
-        email,
-        uf,
-        municipio,
-        status
-      });
+      const { nome, especialidade } = req.body;
+      const medico = await MedicosService.criarMedico(nome, especialidade);
       res.status(201).json(medico);
     } catch (erro) {
       res.status(400).json({ erro: erro.message });
@@ -39,27 +30,6 @@ class MedicosController {
     try {
       const { id } = req.params;
       const medico = await MedicosService.buscarMedicoPorId(id);
-      res.json(medico);
-    } catch (erro) {
-      res.status(400).json({ erro: erro.message });
-    }
-  }
-
-  // PUT /api/medicos/:id - Atualizar médico
-  async atualizar(req, res) {
-    try {
-      const { id } = req.params;
-      const { nome, especialidade, crm, telefone, email, uf, municipio, status } = req.body;
-      const medico = await MedicosService.atualizarMedico(id, {
-        nome,
-        especialidade,
-        crm,
-        telefone,
-        email,
-        uf,
-        municipio,
-        status
-      });
       res.json(medico);
     } catch (erro) {
       res.status(400).json({ erro: erro.message });

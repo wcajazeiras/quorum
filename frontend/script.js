@@ -173,6 +173,11 @@ const contratosTableBody = document.getElementById('contratosTableBody'); // das
 
 function formatDate(value) {
     if (!value) return 'Não informado';
+    // Parse YYYY-MM-DD as local time to avoid UTC→local day shift
+    const isoMatch = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+        return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+    }
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
     return date.toLocaleDateString('pt-BR');
@@ -224,15 +229,17 @@ function buildContratoPageRow(contrato) {
         <td><span class="contrato-valor">${valor}</span></td>
         <td><span class="status ${statusMeta.css}">${statusMeta.label}</span></td>
         <td>
-            <button class="btn-icon" data-action="ver-contrato" data-id="${contrato.id}" title="Visualizar">
-                <i class='bx bxs-show'></i>
-            </button>
-            <button class="btn-icon" data-action="editar-contrato" data-id="${contrato.id}" title="Editar">
-                <i class='bx bxs-edit'></i>
-            </button>
-            <button class="btn-icon danger" data-action="deletar-contrato" data-id="${contrato.id}" title="Excluir">
-                <i class='bx bxs-trash'></i>
-            </button>
+            <div class="actions">
+                <button class="btn-icon" data-action="ver-contrato" data-id="${contrato.id}" title="Visualizar">
+                    <i class='bx bxs-show'></i>
+                </button>
+                <button class="btn-icon" data-action="editar-contrato" data-id="${contrato.id}" title="Editar">
+                    <i class='bx bxs-edit'></i>
+                </button>
+                <button class="btn-icon danger" data-action="deletar-contrato" data-id="${contrato.id}" title="Excluir">
+                    <i class='bx bxs-trash'></i>
+                </button>
+            </div>
         </td>
     `;
     return row;
@@ -1109,9 +1116,14 @@ function openContratoDetalhePage(contrato) {
     // Navigate
     setActivePage('contrato-detalhe');
 
-    // Load PNCP data if available
+    // Load locais de atendimento for this contract
+    loadContratoLocais(contrato.id);
+
+    // Sync PNCP items to local DB + load PNCP data if available
     if (hasPncp) {
-        loadPncpContratoData(contrato, pncpNum);
+        syncContratoItensPncp(contrato.id, pncpNum).then(() => {
+            loadPncpContratoData(contrato, pncpNum);
+        });
     } else {
         // No PNCP: set cards with contract-only data
         const itensCount = document.getElementById('contratoDetalheItensCount');
@@ -1897,7 +1909,9 @@ function formatMedicoLocal(medico) {
 
 function buildMedicoRow(medico) {
     const row = document.createElement('tr');
-    const statusLabel = medico.status ? medico.status : 'ativo';
+    const statusRaw = medico.status ? medico.status.toLowerCase() : 'ativo';
+    const statusLabel = statusRaw === 'ativo' ? 'Ativo' : 'Inativo';
+    const statusCss = statusRaw === 'ativo' ? 'active' : 'pending';
     const avatarHtml = medico.foto
         ? `<img src="${medico.foto}" class="medico-avatar" alt="">`
         : `<span class="medico-avatar medico-avatar-placeholder"><i class='bx bxs-user'></i></span>`;
@@ -1907,7 +1921,7 @@ function buildMedicoRow(medico) {
         <td>${medico.especialidade || ''}</td>
         <td>${medico.crm || 'Não informado'}</td>
         <td>${formatMedicoLocal(medico)}</td>
-        <td>${statusLabel}</td>
+        <td><span class="status ${statusCss}">${statusLabel}</span></td>
         <td>
             <div class="actions">
                 <button class="btn-icon" data-action="view" data-id="${medico.id}" title="Visualizar">
@@ -2199,7 +2213,7 @@ function openMedicoDetalhePage(medico) {
     if (localCard) localCard.textContent = formatMedicoLocal(medico);
     if (statusCard) {
         const st = (medico.status || 'ativo').toLowerCase();
-        const css = st === 'ativo' ? 'completed' : 'pending';
+        const css = st === 'ativo' ? 'active' : 'pending';
         statusCard.innerHTML = `<span class="status ${css}" style="font-size:13px;">${st.charAt(0).toUpperCase() + st.slice(1)}</span>`;
     }
 
@@ -2221,7 +2235,7 @@ function renderMedicoDetalheView(medico) {
     if (!body) return;
 
     const st = (medico.status || 'ativo').toLowerCase();
-    const statusCss = st === 'ativo' ? 'completed' : 'pending';
+    const statusCss = st === 'ativo' ? 'active' : 'pending';
     const statusLabel = st.charAt(0).toUpperCase() + st.slice(1);
 
     const avatarHtml = medico.foto
@@ -2362,8 +2376,11 @@ document.querySelectorAll('[data-page="medico-detalhe"] .breadcrumb a[data-page=
 // ========== PLANTOES (GESTAO) ==========
 const plantoesTableBody = document.getElementById('plantoesTableBody');
 const plantoesFilterStatus = document.getElementById('plantoesFilterStatus');
+const plantoesFilterContrato = document.getElementById('plantoesFilterContrato');
 const plantoesFilterEspecialidade = document.getElementById('plantoesFilterEspecialidade');
+const plantoesFilterMedico = document.getElementById('plantoesFilterMedico');
 const plantoesFilterPeriodo = document.getElementById('plantoesFilterPeriodo');
+const plantoesResumoTotal = document.getElementById('plantoesResumoTotal');
 const plantoesResumoConcluidos = document.getElementById('plantoesResumoConcluidos');
 const plantoesResumoHoje = document.getElementById('plantoesResumoHoje');
 const plantoesResumoAgendados = document.getElementById('plantoesResumoAgendados');
@@ -2372,14 +2389,61 @@ const fecharCadastroPlantao = document.getElementById('fecharCadastroPlantao');
 const plantaoModal = document.getElementById('plantaoModal');
 const plantaoForm = document.getElementById('plantaoForm');
 const plantaoContrato = document.getElementById('plantaoContrato');
+const plantaoLocalAtendimento = document.getElementById('plantaoLocalAtendimento');
 const plantaoMedico = document.getElementById('plantaoMedico');
 const plantaoData = document.getElementById('plantaoData');
 const plantaoCargaHoraria = document.getElementById('plantaoCargaHoraria');
+// Hidden fields for backward compat
+const plantaoUF = document.getElementById('plantaoUF');
+const plantaoMunicipio = document.getElementById('plantaoMunicipio');
+const plantaoLocal = document.getElementById('plantaoLocal');
 let plantoesCache = [];
 let editingPlantaoId = null;
+let plantaoMunicipiosData = null;
+let plantaoLocaisCache = []; // Cache locais for selected contract
+
+// Load locais de atendimento for a specific contract (for plantão form)
+async function loadLocaisForContrato(contratoId) {
+    if (!contratoId) {
+        plantaoLocaisCache = [];
+        if (plantaoLocalAtendimento) {
+            plantaoLocalAtendimento.innerHTML = '<option value="">Selecione o contrato primeiro</option>';
+            plantaoLocalAtendimento.disabled = true;
+        }
+        return [];
+    }
+    try {
+        const res = await fetch(`/api/locais/contrato/${contratoId}`);
+        plantaoLocaisCache = await res.json();
+    } catch (e) {
+        console.error('Erro ao carregar locais:', e);
+        plantaoLocaisCache = [];
+    }
+    if (plantaoLocalAtendimento) {
+        plantaoLocalAtendimento.innerHTML = '<option value="">Selecione o local</option>';
+        plantaoLocaisCache.forEach(l => {
+            const opt = document.createElement('option');
+            opt.value = l.id;
+            const itemRef = l.itemDescricao ? ` (Item: ${l.itemDescricao.substring(0, 40)}...)` : '';
+            opt.textContent = `${l.nome}${l.municipio ? ' - ' + l.municipio : ''}${itemRef}`;
+            plantaoLocalAtendimento.appendChild(opt);
+        });
+        plantaoLocalAtendimento.disabled = plantaoLocaisCache.length === 0;
+    }
+    return plantaoLocaisCache;
+}
+
+// Listen for contract change in plantão form
+if (plantaoContrato) {
+    plantaoContrato.addEventListener('change', () => {
+        loadLocaisForContrato(plantaoContrato.value);
+    });
+}
 
 function getPlantaoStatus(data) {
-    const parsed = new Date(data);
+    // Parse YYYY-MM-DD as local time to avoid UTC→local day shift
+    const str = String(data || '');
+    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(str + 'T00:00:00') : new Date(str);
     if (Number.isNaN(parsed.getTime())) {
         return { label: 'Agendado', css: 'pending', key: 'agendado' };
     }
@@ -2396,22 +2460,58 @@ function getPlantaoStatus(data) {
 }
 
 function formatPlantaoLocal(plantao) {
+    // Prefer linked local de atendimento
+    if (plantao.localNome) {
+        const mun = plantao.localMunicipio || '';
+        return mun ? `${plantao.localNome}, ${mun}` : plantao.localNome;
+    }
+    // Legacy: plantão's own municipio/local
     const cidade = plantao.municipio || '';
-    const uf = plantao.uf || '';
-    if (cidade && uf) return `${cidade} - ${uf}`;
-    return cidade || uf || 'Não informado';
+    const localAtend = plantao.local || '';
+    if (cidade && localAtend) return `${localAtend}, ${cidade}`;
+    if (localAtend) return localAtend;
+    if (cidade) return cidade;
+    // Fallback to médico location
+    const medicoUf = plantao.uf || '';
+    const medicoCidade = plantao.medicoMunicipio || '';
+    if (medicoCidade && medicoUf) return `${medicoCidade} - ${medicoUf}`;
+    return medicoCidade || medicoUf || 'Não informado';
 }
 
 function buildPlantaoRow(plantao) {
     const row = document.createElement('tr');
     const statusMeta = getPlantaoStatus(plantao.data);
-    const contratoLabel = plantao.contratoNumero ? `#${plantao.contratoNumero}` : 'Não vinculado';
+    const contratoLabel = plantao.contratoNumero ? `#${plantao.contratoNumero}` : '<span style="color:var(--dark-grey)">Avulso</span>';
+    const medicoNome = plantao.nome || 'Não informado';
+    const initials = medicoNome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    const avatarHtml = plantao.fotoUrl
+        ? `<img src="${plantao.fotoUrl}" alt="${medicoNome}">`
+        : `<div class="plantao-avatar-sm"><i class='bx bxs-user'></i></div>`;
+    const cargaHtml = plantao.cargaHoraria
+        ? `<span class="plantao-carga-badge"><i class='bx bxs-time'></i> ${plantao.cargaHoraria}h</span>`
+        : '-';
+    const itemPncp = plantao.itemDescricao
+        ? `<span class="pncp-item-badge" title="${plantao.itemDescricao}">#${plantao.itemNumero || ''} ${plantao.itemDescricao.substring(0, 30)}${plantao.itemDescricao.length > 30 ? '...' : ''}</span>`
+        : '<span style="color:var(--dark-grey)">-</span>';
+    const isConfirmado = plantao.confirmado === 1;
+    const confirmBtnClass = isConfirmado ? 'confirmacao-badge confirmado' : 'confirmacao-badge pendente';
+    const confirmLabel = isConfirmado ? '<i class="bx bxs-check-circle"></i> Confirmado' : '<i class="bx bxs-error-circle"></i> Pendente';
+    row.dataset.plantaoId = plantao.id;
     row.innerHTML = `
+        <td style="text-align:center;"><input type="checkbox" class="plantao-row-check" data-id="${plantao.id}"></td>
         <td>${contratoLabel}</td>
         <td>${formatDate(plantao.data)}</td>
-        <td>${plantao.nome || 'Não informado'}</td>
+        <td>
+            <div class="plantao-medico-cell">
+                ${avatarHtml}
+                <a class="plantao-medico-name" data-medico-id="${plantao.medicoId}">${medicoNome}</a>
+            </div>
+        </td>
         <td>${plantao.especialidade || 'Não informado'}</td>
+        <td>${cargaHtml}</td>
         <td>${formatPlantaoLocal(plantao)}</td>
+        <td>${itemPncp}</td>
+        <td><button class="${confirmBtnClass}" data-action="toggle-confirm" data-id="${plantao.id}">${confirmLabel}</button></td>
         <td><span class="status ${statusMeta.css}">${statusMeta.label}</span></td>
         <td>
             <div class="actions">
@@ -2430,7 +2530,8 @@ function buildPlantaoRow(plantao) {
 function renderPlantoesTable(items) {
     if (!plantoesTableBody) return;
     if (!items || items.length === 0) {
-        plantoesTableBody.innerHTML = '<tr><td colspan="7">Nenhum plantão cadastrado.</td></tr>';
+        plantoesTableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--dark-grey)">Nenhum plantão cadastrado.</td></tr>';
+        resetPlantoesSelection();
         return;
     }
 
@@ -2438,18 +2539,42 @@ function renderPlantoesTable(items) {
     items.forEach(plantao => {
         plantoesTableBody.appendChild(buildPlantaoRow(plantao));
     });
+    resetPlantoesSelection();
 }
 
 function updatePlantoesFilters(items) {
-    if (!plantoesFilterEspecialidade) return;
-    const specialties = [...new Set(items.map(p => p.especialidade).filter(Boolean))].sort();
-    plantoesFilterEspecialidade.innerHTML = '<option value="">Todas</option>';
-    specialties.forEach(spec => {
-        const option = document.createElement('option');
-        option.value = spec;
-        option.textContent = spec;
-        plantoesFilterEspecialidade.appendChild(option);
-    });
+    if (plantoesFilterEspecialidade) {
+        const specialties = [...new Set(items.map(p => p.especialidade).filter(Boolean))].sort();
+        plantoesFilterEspecialidade.innerHTML = '<option value="">Todas</option>';
+        specialties.forEach(spec => {
+            const option = document.createElement('option');
+            option.value = spec;
+            option.textContent = spec;
+            plantoesFilterEspecialidade.appendChild(option);
+        });
+    }
+    if (plantoesFilterMedico) {
+        const medicos = [...new Map(items.filter(p => p.nome).map(p => [p.medicoId, p.nome])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+        plantoesFilterMedico.innerHTML = '<option value="">Todos</option>';
+        medicos.forEach(([id, nome]) => {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = nome;
+            plantoesFilterMedico.appendChild(option);
+        });
+    }
+    if (plantoesFilterContrato) {
+        const prevVal = plantoesFilterContrato.value;
+        const contratos = [...new Map(items.filter(p => p.contratoId).map(p => [p.contratoId, p.contratoNumero || p.contratoId])).entries()].sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+        plantoesFilterContrato.innerHTML = '<option value="">Todos</option>';
+        contratos.forEach(([id, num]) => {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = `#${num}`;
+            plantoesFilterContrato.appendChild(option);
+        });
+        if (prevVal) plantoesFilterContrato.value = prevVal;
+    }
 }
 
 function parseDateInput(value) {
@@ -2480,14 +2605,18 @@ function parseDateRange(value) {
 
 function applyPlantoesFilters() {
     const statusFilter = plantoesFilterStatus ? plantoesFilterStatus.value : '';
+    const contratoFilter = plantoesFilterContrato ? plantoesFilterContrato.value : '';
     const especFilter = plantoesFilterEspecialidade ? plantoesFilterEspecialidade.value : '';
+    const medicoFilter = plantoesFilterMedico ? plantoesFilterMedico.value : '';
     const periodoFilter = plantoesFilterPeriodo ? plantoesFilterPeriodo.value : '';
     const range = parseDateRange(periodoFilter);
 
     const filtered = plantoesCache.filter(plantao => {
         const statusMeta = getPlantaoStatus(plantao.data);
         const matchesStatus = !statusFilter || statusMeta.key === statusFilter;
+        const matchesContrato = !contratoFilter || String(plantao.contratoId) === String(contratoFilter);
         const matchesEspecialidade = !especFilter || plantao.especialidade === especFilter;
+        const matchesMedico = !medicoFilter || String(plantao.medicoId) === String(medicoFilter);
 
         let matchesPeriodo = true;
         if (range.start || range.end) {
@@ -2500,27 +2629,27 @@ function applyPlantoesFilters() {
             }
         }
 
-        return matchesStatus && matchesEspecialidade && matchesPeriodo;
+        return matchesStatus && matchesContrato && matchesEspecialidade && matchesMedico && matchesPeriodo;
     });
 
     renderPlantoesTable(filtered);
 }
 
 function updatePlantoesResumo(items) {
-    if (!plantoesResumoConcluidos || !plantoesResumoHoje || !plantoesResumoAgendados) return;
     const counts = { concluido: 0, hoje: 0, agendado: 0 };
     items.forEach(plantao => {
         const statusMeta = getPlantaoStatus(plantao.data);
         counts[statusMeta.key] = (counts[statusMeta.key] || 0) + 1;
     });
-    plantoesResumoConcluidos.textContent = counts.concluido || 0;
-    plantoesResumoHoje.textContent = counts.hoje || 0;
-    plantoesResumoAgendados.textContent = counts.agendado || 0;
+    if (plantoesResumoTotal) plantoesResumoTotal.textContent = items.length;
+    if (plantoesResumoConcluidos) plantoesResumoConcluidos.textContent = counts.concluido || 0;
+    if (plantoesResumoHoje) plantoesResumoHoje.textContent = counts.hoje || 0;
+    if (plantoesResumoAgendados) plantoesResumoAgendados.textContent = counts.agendado || 0;
 }
 
 async function loadPlantoes() {
     if (!plantoesTableBody) return;
-    plantoesTableBody.innerHTML = '<tr><td colspan="7">Carregando plantões...</td></tr>';
+    plantoesTableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--dark-grey)">Carregando plantões...</td></tr>';
 
     try {
         const response = await fetch('/api/plantoes');
@@ -2532,8 +2661,11 @@ async function loadPlantoes() {
         updatePlantoesFilters(plantoesCache);
         updatePlantoesResumo(plantoesCache);
         applyPlantoesFilters();
+        // Load alerts after loading plantoes
+        loadPlantoesAlertas();
+        loadNotifications();
     } catch (error) {
-        plantoesTableBody.innerHTML = '<tr><td colspan="7">Erro ao carregar plantões.</td></tr>';
+        plantoesTableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--dark-grey)">Erro ao carregar plantões.</td></tr>';
         console.error(error);
     }
 }
@@ -2541,7 +2673,7 @@ async function loadPlantoes() {
 function syncPlantaoContratosOptions() {
     if (!plantaoContrato) return;
     const currentValue = plantaoContrato.value;
-    plantaoContrato.innerHTML = '<option value="">Selecione</option>';
+    plantaoContrato.innerHTML = '<option value="">Selecione o contrato</option>';
     contratosCache.forEach(contrato => {
         const option = document.createElement('option');
         option.value = contrato.id;
@@ -2562,7 +2694,7 @@ function syncPlantaoMedicosOptions() {
     medicosCache.forEach(medico => {
         const option = document.createElement('option');
         option.value = medico.id;
-        option.textContent = `${medico.nome} (${medico.especialidade || 'Sem especialidade'})`;
+        option.textContent = `${medico.nome} (CRM: ${medico.crm || 'N/A'})`;
         plantaoMedico.appendChild(option);
     });
     if (currentValue) {
@@ -2584,12 +2716,27 @@ function openPlantaoModal(plantao = null) {
         syncPlantaoContratosOptions();
     }
 
+    // Reset local de atendimento
+    if (plantaoLocalAtendimento) {
+        plantaoLocalAtendimento.innerHTML = '<option value="">Selecione o contrato primeiro</option>';
+        plantaoLocalAtendimento.disabled = true;
+    }
+
     if (plantao) {
         editingPlantaoId = plantao.id;
         if (plantaoContrato) plantaoContrato.value = plantao.contratoId || '';
         if (plantaoMedico) plantaoMedico.value = plantao.medicoId;
         if (plantaoData) plantaoData.value = String(plantao.data || '').slice(0, 10);
         if (plantaoCargaHoraria) plantaoCargaHoraria.value = plantao.cargaHoraria || '';
+
+        // Load locais for this contract and set the selected local
+        if (plantao.contratoId) {
+            loadLocaisForContrato(plantao.contratoId).then(() => {
+                if (plantaoLocalAtendimento && plantao.localAtendimentoId) {
+                    plantaoLocalAtendimento.value = plantao.localAtendimentoId;
+                }
+            });
+        }
     } else {
         editingPlantaoId = null;
         plantaoForm.reset();
@@ -2631,9 +2778,16 @@ if (plantaoModal) {
 if (plantaoForm) {
     plantaoForm.addEventListener('submit', async event => {
         event.preventDefault();
+        // Get local de atendimento data for backward compat fields
+        const selectedLocalId = plantaoLocalAtendimento ? Number(plantaoLocalAtendimento.value) || null : null;
+        const selectedLocal = selectedLocalId ? plantaoLocaisCache.find(l => l.id === selectedLocalId) : null;
+
         const payload = {
             contratoId: plantaoContrato ? Number(plantaoContrato.value) || null : null,
+            localAtendimentoId: selectedLocalId,
             medicoId: plantaoMedico ? Number(plantaoMedico.value) : null,
+            municipio: selectedLocal ? (selectedLocal.municipio || '') : '',
+            local: selectedLocal ? (selectedLocal.nome || '') : '',
             data: plantaoData ? plantaoData.value : '',
             cargaHoraria: plantaoCargaHoraria ? Number(plantaoCargaHoraria.value) : null
         };
@@ -2689,6 +2843,28 @@ if (plantoesTableBody) {
                 console.error(error);
             }
         }
+
+        if (action === 'toggle-confirm' && plantaoId) {
+            const plantao = plantoesCache.find(p => String(p.id) === String(plantaoId));
+            if (!plantao) return;
+            const isConfirmado = plantao.confirmado === 1;
+            const endpoint = isConfirmado ? 'desconfirmar' : 'confirmar';
+            try {
+                const res = await fetch(`/api/plantoes/${plantaoId}/${endpoint}`, { method: 'PATCH' });
+                if (!res.ok) throw new Error('Falha ao alterar confirmação');
+                // Update local cache
+                plantao.confirmado = isConfirmado ? 0 : 1;
+                plantao.dataConfirmacao = isConfirmado ? null : new Date().toISOString();
+                // Re-render row in place
+                const oldRow = button.closest('tr');
+                if (oldRow) {
+                    const newRow = buildPlantaoRow(plantao);
+                    oldRow.replaceWith(newRow);
+                }
+                loadPlantoesAlertas();
+                loadNotifications();
+            } catch (e) { console.error(e); }
+        }
     });
 }
 
@@ -2700,9 +2876,121 @@ if (plantoesFilterEspecialidade) {
     plantoesFilterEspecialidade.addEventListener('change', applyPlantoesFilters);
 }
 
+if (plantoesFilterMedico) {
+    plantoesFilterMedico.addEventListener('change', applyPlantoesFilters);
+}
+
+if (plantoesFilterContrato) {
+    plantoesFilterContrato.addEventListener('change', applyPlantoesFilters);
+}
+
 if (plantoesFilterPeriodo) {
     plantoesFilterPeriodo.addEventListener('input', applyPlantoesFilters);
 }
+
+// Click on médico name in plantões table to open detail page
+if (plantoesTableBody) {
+    plantoesTableBody.addEventListener('click', (e) => {
+        const medicoLink = e.target.closest('.plantao-medico-name');
+        if (medicoLink) {
+            e.preventDefault();
+            const medicoId = medicoLink.dataset.medicoId;
+            if (medicoId && typeof openMedicoDetalhePage === 'function') {
+                openMedicoDetalhePage(medicoId);
+            }
+        }
+    });
+}
+
+// ========== PLANTÕES - SELEÇÃO MÚLTIPLA ==========
+function resetPlantoesSelection() {
+    const selAll = document.getElementById('plantoesSelectAll');
+    if (selAll) selAll.checked = false;
+    updatePlantoesBulkUI();
+}
+
+function updatePlantoesBulkUI() {
+    const checks = plantoesTableBody ? plantoesTableBody.querySelectorAll('.plantao-row-check:checked') : [];
+    const count = checks.length;
+    const bar = document.getElementById('plantoesBulkBar');
+    const span = document.getElementById('plantoesBulkCount');
+    if (bar) bar.style.display = count > 0 ? '' : 'none';
+    if (span) span.textContent = count;
+}
+
+function getSelectedPlantaoIds() {
+    if (!plantoesTableBody) return [];
+    return [...plantoesTableBody.querySelectorAll('.plantao-row-check:checked')].map(cb => cb.dataset.id);
+}
+
+// Select-all checkbox
+document.getElementById('plantoesSelectAll')?.addEventListener('change', (e) => {
+    const checked = e.target.checked;
+    if (!plantoesTableBody) return;
+    plantoesTableBody.querySelectorAll('.plantao-row-check').forEach(cb => { cb.checked = checked; });
+    updatePlantoesBulkUI();
+});
+
+// Row checkbox changes
+if (plantoesTableBody) {
+    plantoesTableBody.addEventListener('change', (e) => {
+        if (e.target.classList.contains('plantao-row-check')) {
+            updatePlantoesBulkUI();
+            const all = plantoesTableBody.querySelectorAll('.plantao-row-check');
+            const allChecked = plantoesTableBody.querySelectorAll('.plantao-row-check:checked');
+            const selAll = document.getElementById('plantoesSelectAll');
+            if (selAll) selAll.checked = all.length > 0 && all.length === allChecked.length;
+        }
+    });
+}
+
+// Bulk confirmar
+document.getElementById('plantoesBulkConfirmar')?.addEventListener('click', async () => {
+    const ids = getSelectedPlantaoIds();
+    if (ids.length === 0) return;
+    if (!confirm(`Confirmar ${ids.length} plantão(ões)?`)) return;
+    let ok = 0;
+    for (const id of ids) {
+        try {
+            const res = await fetch(`/api/plantoes/${id}/confirmar`, { method: 'PATCH' });
+            if (res.ok) ok++;
+        } catch (e) { /* skip */ }
+    }
+    alert(`${ok} de ${ids.length} plantão(ões) confirmado(s).`);
+    loadPlantoes();
+});
+
+// Bulk desconfirmar
+document.getElementById('plantoesBulkDesconfirmar')?.addEventListener('click', async () => {
+    const ids = getSelectedPlantaoIds();
+    if (ids.length === 0) return;
+    if (!confirm(`Desconfirmar ${ids.length} plantão(ões)?`)) return;
+    let ok = 0;
+    for (const id of ids) {
+        try {
+            const res = await fetch(`/api/plantoes/${id}/desconfirmar`, { method: 'PATCH' });
+            if (res.ok) ok++;
+        } catch (e) { /* skip */ }
+    }
+    alert(`${ok} de ${ids.length} plantão(ões) desconfirmado(s).`);
+    loadPlantoes();
+});
+
+// Bulk excluir
+document.getElementById('plantoesBulkExcluir')?.addEventListener('click', async () => {
+    const ids = getSelectedPlantaoIds();
+    if (ids.length === 0) return;
+    if (!confirm(`Excluir ${ids.length} plantão(ões)? Esta ação não pode ser desfeita.`)) return;
+    let ok = 0;
+    for (const id of ids) {
+        try {
+            const res = await fetch(`/api/plantoes/${id}`, { method: 'DELETE' });
+            if (res.ok) ok++;
+        } catch (e) { /* skip */ }
+    }
+    alert(`${ok} de ${ids.length} plantão(ões) excluído(s).`);
+    loadPlantoes();
+});
 
 // ========== PNCP - PORTAL NACIONAL DE CONTRATAÇÕES PÚBLICAS ==========
 const pncpFilterForm = document.getElementById('pncpFilterForm');
@@ -3549,3 +3837,1293 @@ window.addEventListener('load', function () {
 });
 window.addEventListener('load', loadMedicos);
 window.addEventListener('load', loadPlantoes);
+window.addEventListener('load', loadAtendimentos);
+
+// ========== PLANTÕES VIEW TABS + CALENDÁRIO + ALERTAS ==========
+let calendarioMesAtual = new Date().getMonth() + 1;
+let calendarioAnoAtual = new Date().getFullYear();
+let necessidadesCache = [];
+
+// View tab switching
+document.querySelectorAll('.plantoes-view-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.plantoes-view-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.plantoes-view-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        const view = tab.dataset.plantoesView;
+        const content = document.querySelector(`[data-plantoes-view-content="${view}"]`);
+        if (content) content.classList.add('active');
+        if (view === 'calendario') loadCalendarioNecessidades();
+    });
+});
+
+// Calendar month navigation
+document.getElementById('calendarioPrev')?.addEventListener('click', () => {
+    calendarioMesAtual--;
+    if (calendarioMesAtual < 1) { calendarioMesAtual = 12; calendarioAnoAtual--; }
+    loadCalendarioNecessidades();
+});
+
+document.getElementById('calendarioNext')?.addEventListener('click', () => {
+    calendarioMesAtual++;
+    if (calendarioMesAtual > 12) { calendarioMesAtual = 1; calendarioAnoAtual++; }
+    loadCalendarioNecessidades();
+});
+
+document.getElementById('calendarioFilterContrato')?.addEventListener('change', () => {
+    renderCalendarioFromCache();
+});
+
+function updateCalendarioMesLabel() {
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const el = document.getElementById('calendarioMesAno');
+    if (el) el.textContent = `${meses[calendarioMesAtual - 1]} ${calendarioAnoAtual}`;
+}
+
+async function loadCalendarioNecessidades() {
+    updateCalendarioMesLabel();
+    const container = document.getElementById('calendarioNecessidades');
+    if (!container) return;
+    container.innerHTML = '<p style="text-align:center;padding:20px;color:var(--dark-grey)"><i class="bx bx-loader-alt bx-spin"></i> Calculando necessidades...</p>';
+
+    try {
+        const res = await fetch(`/api/plantoes/necessidades?mes=${calendarioMesAtual}&ano=${calendarioAnoAtual}`);
+        if (!res.ok) throw new Error('Falha ao carregar necessidades');
+        necessidadesCache = await res.json();
+
+        // Populate contract filter
+        populateCalendarioContratoFilter();
+        renderCalendarioFromCache();
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<p style="text-align:center;padding:20px;color:var(--dark-grey)">Erro ao carregar necessidades.</p>';
+    }
+}
+
+function populateCalendarioContratoFilter() {
+    const select = document.getElementById('calendarioFilterContrato');
+    if (!select) return;
+    const prevValue = select.value;
+    const contratos = [...new Map(necessidadesCache.map(n => [n.contratoId, n.contratoNumero || `#${n.contratoId}`])).entries()];
+    select.innerHTML = '<option value="">Todos os contratos</option>';
+    contratos.forEach(([id, label]) => {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = `#${label}`;
+        select.appendChild(opt);
+    });
+    // Restore previous selection if still available
+    if (prevValue && [...select.options].some(o => o.value === prevValue)) {
+        select.value = prevValue;
+    }
+}
+
+function renderCalendarioFromCache() {
+    const container = document.getElementById('calendarioNecessidades');
+    if (!container) return;
+
+    const filterContrato = document.getElementById('calendarioFilterContrato')?.value;
+    let filtered = necessidadesCache;
+    if (filterContrato) filtered = filtered.filter(n => String(n.contratoId) === filterContrato);
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--dark-grey)">
+            <i class='bx bx-calendar-x' style="font-size:48px;display:block;margin-bottom:12px;opacity:0.4;"></i>
+            <p>Nenhuma necessidade de programação encontrada para este período.</p>
+            <small>Configure a programação nos Locais de Atendimento (aba Contratos).</small>
+        </div>`;
+        return;
+    }
+
+    let html = '';
+    filtered.forEach(nec => {
+        html += renderCalendarioLocal(nec);
+    });
+    container.innerHTML = html;
+}
+
+function renderCalendarioLocal(nec) {
+    const diasSemanaMap = { seg: 'Seg', ter: 'Ter', qua: 'Qua', qui: 'Qui', sex: 'Sex', sab: 'Sáb', dom: 'Dom' };
+    const diasArr = (nec.diasSemana || '').split(',').map(d => diasSemanaMap[d.trim()] || '').filter(Boolean);
+
+    const pct = nec.percentualPreenchido || 0;
+    const barColor = pct >= 100 ? 'green' : pct >= 50 ? 'yellow' : 'red';
+    const barPct = Math.min(pct, 100);
+
+    let html = `<div class="cal-local-block">
+        <div class="cal-local-header">
+            <div class="cal-local-title">
+                <i class='bx bxs-clinic'></i>
+                ${nec.localNome || 'Local'} <small style="color:var(--dark-grey);font-weight:400;margin-left:6px;">#${nec.contratoNumero || nec.contratoId}</small>
+            </div>
+            <div class="cal-local-meta">
+                <span class="cal-meta-badge"><i class='bx bxs-time' style="margin-right:3px;"></i> ${nec.cargaHorariaDiaria || 0}h/dia</span>
+                ${diasArr.length ? `<span class="cal-meta-badge"><i class='bx bxs-calendar' style="margin-right:3px;"></i> ${diasArr.join(', ')}</span>` : ''}
+                <span class="cal-meta-badge"><i class='bx bxs-user' style="margin-right:3px;"></i> ${nec.vagasProfissionais || 1} vaga(s)</span>
+            </div>
+        </div>`;
+
+    // Calendar grid
+    html += '<div class="cal-grid">';
+
+    // Day headers
+    const dayHeaders = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    dayHeaders.forEach(d => { html += `<div class="cal-day-header">${d}</div>`; });
+
+    // Build days
+    const year = calendarioAnoAtual;
+    const month = calendarioMesAtual - 1;
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    // Map scheduled plantoes by date
+    const agendadosPorDia = {};
+    if (nec.plantoes && Array.isArray(nec.plantoes)) {
+        nec.plantoes.forEach(p => {
+            const d = p.data;
+            if (!agendadosPorDia[d]) agendadosPorDia[d] = { horas: 0, count: 0, plantoes: [] };
+            agendadosPorDia[d].horas += (p.cargaHoraria || 0);
+            agendadosPorDia[d].count++;
+            agendadosPorDia[d].plantoes.push(p);
+        });
+    }
+
+    // Determine which days of the week require shifts
+    const diasSemanaJS = { dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, sab: 6 };
+    const requiredDays = new Set();
+    (nec.diasSemana || '').split(',').forEach(d => {
+        const n = diasSemanaJS[d.trim()];
+        if (n !== undefined) requiredDays.add(n);
+    });
+
+    // Programming period
+    const progInicio = nec.dataInicioProgramacao ? new Date(nec.dataInicioProgramacao + 'T00:00:00') : null;
+    const progFim = nec.dataFimProgramacao ? new Date(nec.dataFimProgramacao + 'T00:00:00') : null;
+
+    // Empty cells for first week
+    for (let i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateObj = new Date(year, month, day);
+        const dow = dateObj.getDay();
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isToday = dateStr === todayStr;
+        const needsShift = requiredDays.has(dow);
+
+        // Check if within programming period
+        let inPeriod = true;
+        if (progInicio && dateObj < progInicio) inPeriod = false;
+        if (progFim && dateObj > progFim) inPeriod = false;
+
+        const showNeed = needsShift && inPeriod;
+        const horasNecessarias = showNeed ? (nec.cargaHorariaDiaria || 0) * (nec.vagasProfissionais || 1) : 0;
+        const agendado = agendadosPorDia[dateStr] || { horas: 0, count: 0, plantoes: [] };
+        const pctDia = horasNecessarias > 0 ? Math.round((agendado.horas / horasNecessarias) * 100) : 0;
+
+        // Color classes for background
+        let statusClass = '';
+        if (!showNeed) {
+            statusClass = 'no-need';
+        } else if (agendado.horas === 0) {
+            statusClass = 'status-pending'; // red/gray — no shifts
+        } else if (agendado.horas === horasNecessarias) {
+            statusClass = 'status-filled'; // green — exact match
+        } else {
+            statusClass = 'status-partial'; // orange — partial or excess
+        }
+
+        let classes = 'cal-day ' + statusClass;
+        if (isToday) classes += ' today';
+        if (showNeed) classes += ' clickable';
+
+        const clickAttr = showNeed ? ` onclick="openCalQuickAssign(${nec.contratoId}, ${nec.localId}, '${dateStr}', ${horasNecessarias})"` : '';
+
+        html += `<div class="${classes}"${clickAttr}>
+            <div class="cal-day-num">${day}</div>`;
+
+        if (showNeed) {
+            const barClass = agendado.horas === 0 ? 'red' : agendado.horas >= horasNecessarias ? 'green' : 'orange';
+            const barWidth = agendado.horas === 0 ? 100 : (horasNecessarias > 0 ? Math.min(Math.round((agendado.horas / horasNecessarias) * 100), 100) : 0);
+            html += `<div class="cal-day-bar"><div class="cal-day-bar-fill ${barClass}" style="width:${barWidth}%"></div></div>`;
+            html += `<div class="cal-day-info">${agendado.horas}h / <strong>${horasNecessarias}h</strong></div>`;
+        }
+
+        html += '</div>';
+    }
+
+    html += '</div>';
+
+    // Progress summary
+    html += `<div class="cal-local-progress">
+        <div class="cal-progress-bar"><div class="cal-progress-fill ${barColor}" style="width:${barPct}%"></div></div>
+        <span class="cal-progress-label" style="color:${barColor === 'green' ? '#22c55e' : barColor === 'yellow' ? '#eab308' : 'var(--red)'};">${Math.round(pct)}%</span>
+    </div>`;
+
+    html += '</div>';
+    return html;
+}
+
+// ========== QUICK ASSIGN FROM CALENDAR ==========
+function openCalQuickAssign(contratoId, localId, dateStr, horasNecessarias) {
+    const modal = document.getElementById('calQuickAssignModal');
+    if (!modal) return;
+
+    // Set hidden fields
+    document.getElementById('calQuickContratoId').value = contratoId;
+    document.getElementById('calQuickLocalId').value = localId;
+    document.getElementById('calQuickData').value = dateStr;
+
+    // Pre-fill carga with needed hours
+    const cargaInput = document.getElementById('calQuickCarga');
+    if (cargaInput) cargaInput.value = horasNecessarias || '';
+
+    // Find local/nec info from cache
+    const nec = necessidadesCache.find(n => n.localId === localId && n.contratoId === contratoId);
+    const localNome = nec ? nec.localNome : 'Local';
+    const contratoNum = nec ? (nec.contratoNumero || contratoId) : contratoId;
+
+    // Format date
+    const [y, m, d] = dateStr.split('-');
+    const dateFormatted = `${d}/${m}/${y}`;
+
+    // Info
+    const infoEl = document.getElementById('calQuickAssignInfo');
+    if (infoEl) {
+        infoEl.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+            <span class="cal-meta-badge"><i class='bx bxs-clinic' style="margin-right:3px;"></i> ${localNome}</span>
+            <span class="cal-meta-badge"><i class='bx bxs-file-doc' style="margin-right:3px;"></i> #${contratoNum}</span>
+            <span class="cal-meta-badge"><i class='bx bxs-calendar' style="margin-right:3px;"></i> ${dateFormatted}</span>
+        </div>`;
+    }
+
+    // Load medicos into select
+    const medicoSelect = document.getElementById('calQuickMedico');
+    if (medicoSelect) {
+        medicoSelect.innerHTML = '<option value="">Selecione o médico</option>';
+        medicosCache.forEach(med => {
+            const opt = document.createElement('option');
+            opt.value = med.id;
+            opt.textContent = `${med.nome} (CRM: ${med.crm || 'N/A'})`;
+            medicoSelect.appendChild(opt);
+        });
+    }
+
+    // Show existing plantões for this day (editable)
+    const listEl = document.getElementById('calQuickAssignList');
+    if (listEl && nec) {
+        const dayPlantoes = (nec.plantoes || []).filter(p => p.data === dateStr);
+        if (dayPlantoes.length > 0) {
+            let listHtml = '<div class="cal-quick-day-list"><strong style="font-size:12px;color:var(--dark-grey);">Plantões neste dia:</strong>';
+            dayPlantoes.forEach(p => {
+                const medicoNome = p.medicoNome || 'Médico';
+                const pData = encodeURIComponent(JSON.stringify({medicoId:p.medicoId,data:p.data,contratoId:p.contratoId,municipio:p.municipio||'',local:p.local||'',localAtendimentoId:p.localAtendimentoId}));
+                listHtml += `<div class="cal-quick-day-item" id="calQItem-${p.id}" data-plantao="${pData}">
+                    <span class="cal-quick-day-nome"><i class='bx bxs-user-circle' style="margin-right:4px;color:var(--blue);"></i>${medicoNome}</span>
+                    <div class="cal-quick-day-actions">
+                        <input type="number" class="cal-quick-day-carga" value="${p.cargaHoraria || 0}" min="1" max="24" title="Carga horária">
+                        <span class="cal-quick-day-h">h</span>
+                        <button type="button" class="cal-quick-btn-save" title="Salvar" onclick="calQuickUpdatePlantao(${p.id})"><i class='bx bx-check'></i></button>
+                        <button type="button" class="cal-quick-btn-del" title="Excluir" onclick="calQuickDeletePlantao(${p.id}, ${contratoId}, ${localId}, '${dateStr}', ${horasNecessarias})"><i class='bx bx-trash'></i></button>
+                    </div>
+                </div>`;
+            });
+            listHtml += '</div>';
+            listEl.innerHTML = listHtml;
+        } else {
+            listEl.innerHTML = '';
+        }
+    }
+
+    // Reset form (but keep carga)
+    document.getElementById('calQuickAssignForm').reset();
+    if (cargaInput) cargaInput.value = horasNecessarias || '';
+
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeCalQuickAssign() {
+    const modal = document.getElementById('calQuickAssignModal');
+    if (!modal) return;
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+document.getElementById('calQuickAssignClose')?.addEventListener('click', closeCalQuickAssign);
+document.getElementById('calQuickAssignModal')?.addEventListener('click', e => {
+    if (e.target.id === 'calQuickAssignModal') closeCalQuickAssign();
+});
+
+// Inline edit plantão carga from quick-assign modal
+async function calQuickUpdatePlantao(plantaoId) {
+    const row = document.getElementById(`calQItem-${plantaoId}`);
+    if (!row) return;
+    const input = row.querySelector('.cal-quick-day-carga');
+    const newCarga = Number(input?.value);
+    if (!newCarga || newCarga < 1) return;
+
+    // Read stored plantão data for required fields
+    const pInfo = JSON.parse(decodeURIComponent(row.dataset.plantao || '{}'));
+
+    try {
+        const res = await fetch(`/api/plantoes/${plantaoId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                medicoId: pInfo.medicoId,
+                data: pInfo.data,
+                cargaHoraria: newCarga,
+                contratoId: pInfo.contratoId,
+                municipio: pInfo.municipio || '',
+                local: pInfo.local || '',
+                localAtendimentoId: pInfo.localAtendimentoId
+            })
+        });
+        if (!res.ok) throw new Error('Erro ao atualizar');
+        // Visual feedback
+        row.classList.add('cal-quick-saved');
+        setTimeout(() => row.classList.remove('cal-quick-saved'), 1200);
+        // Save scroll position
+        const scrollY = window.scrollY;
+        // Refresh calendar in background
+        await loadCalendarioNecessidades();
+        window.scrollTo(0, scrollY);
+        loadPlantoes().catch(() => {});
+        loadNotifications();
+        // Re-open modal with updated data
+        const contratoId = Number(document.getElementById('calQuickContratoId').value);
+        const localId = Number(document.getElementById('calQuickLocalId').value);
+        const dateStr = document.getElementById('calQuickData').value;
+        const nec = necessidadesCache.find(n => n.localId === localId && n.contratoId === contratoId);
+        const horasNecessarias = nec ? (nec.cargaHorariaDiaria * nec.vagasProfissionais) : 0;
+        openCalQuickAssign(contratoId, localId, dateStr, horasNecessarias);
+    } catch (err) {
+        console.error(err);
+        alert('Erro ao atualizar plantão.');
+    }
+}
+
+// Delete plantão from quick-assign modal
+async function calQuickDeletePlantao(plantaoId, contratoId, localId, dateStr, horasNecessarias) {
+    if (!confirm('Excluir este plantão?')) return;
+    try {
+        const res = await fetch(`/api/plantoes/${plantaoId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Erro ao excluir');
+        // Save scroll position
+        const scrollY = window.scrollY;
+        // Refresh calendar + re-open modal
+        await loadCalendarioNecessidades();
+        window.scrollTo(0, scrollY);
+        loadPlantoes().catch(() => {});
+        loadNotifications();
+        openCalQuickAssign(contratoId, localId, dateStr, horasNecessarias);
+    } catch (err) {
+        console.error(err);
+        alert('Erro ao excluir plantão.');
+    }
+}
+
+document.getElementById('calQuickAssignForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const contratoId = Number(document.getElementById('calQuickContratoId').value);
+    const localId = Number(document.getElementById('calQuickLocalId').value);
+    const dateStr = document.getElementById('calQuickData').value;
+    const medicoId = Number(document.getElementById('calQuickMedico').value);
+    const carga = Number(document.getElementById('calQuickCarga').value);
+
+    if (!medicoId || !carga) return;
+
+    // Get local info for backward compat fields
+    const nec = necessidadesCache.find(n => n.localId === localId && n.contratoId === contratoId);
+
+    const payload = {
+        contratoId,
+        localAtendimentoId: localId,
+        medicoId,
+        municipio: nec ? (nec.localMunicipio || '') : '',
+        local: nec ? (nec.localNome || '') : '',
+        data: dateStr,
+        cargaHoraria: carga
+    };
+
+    try {
+        const response = await fetch('/api/plantoes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error('Erro ao salvar');
+
+        // Save scroll position
+        const scrollY = window.scrollY;
+        // Refresh calendar
+        await loadCalendarioNecessidades();
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
+        // Also refresh plantoes table in background
+        loadPlantoes().catch(() => {});
+        loadNotifications();
+        // Re-open modal with updated data
+        const nec2 = necessidadesCache.find(n => n.localId === localId && n.contratoId === contratoId);
+        const horasNec = nec2 ? (nec2.cargaHorariaDiaria * nec2.vagasProfissionais) : 0;
+        openCalQuickAssign(contratoId, localId, dateStr, horasNec);
+    } catch (err) {
+        console.error(err);
+        alert('Erro ao salvar plantão.');
+    }
+});
+
+// ========== ALERTAS PANEL ==========
+async function loadPlantoesAlertas() {
+    const panel = document.getElementById('plantoesAlertasPanel');
+    const body = document.getElementById('plantoesAlertasBody');
+    if (!panel || !body) return;
+
+    try {
+        // Get unfulfilled needs for current month
+        const now = new Date();
+        const mes = now.getMonth() + 1;
+        const ano = now.getFullYear();
+        const [necRes, naoConfRes] = await Promise.all([
+            fetch(`/api/plantoes/necessidades?mes=${mes}&ano=${ano}`),
+            fetch('/api/plantoes/nao-confirmados')
+        ]);
+
+        const necessidades = necRes.ok ? await necRes.json() : [];
+        const naoConfirmados = naoConfRes.ok ? await naoConfRes.json() : [];
+
+        const alertas = [];
+
+        // Alert for unfilled needs
+        necessidades.forEach(nec => {
+            const pct = nec.percentualPreenchido || 0;
+            if (pct < 100) {
+                const horasFaltam = Math.max(0, (nec.horasNecessarias || 0) - (nec.horasAgendadas || 0));
+                alertas.push({
+                    tipo: 'necessidade',
+                    titulo: `Necessidade não preenchida`,
+                    detalhe: `${nec.localNome || 'Local'} (#${nec.contratoNumero || nec.contratoId}) — faltam ${horasFaltam}h (${Math.round(pct)}% preenchido)`,
+                    icon: 'bx bxs-error-circle'
+                });
+            }
+        });
+
+        // Alert for unconfirmed shifts
+        naoConfirmados.forEach(p => {
+            const medicoNome = p.nome || 'Médico não informado';
+            alertas.push({
+                tipo: 'confirmacao',
+                titulo: `Médico não confirmou plantão`,
+                detalhe: `${medicoNome} — ${formatDate(p.data)} (${p.cargaHoraria || 0}h) — ${p.localNome || p.local || 'Local não informado'}`,
+                icon: 'bx bxs-time-five'
+            });
+        });
+
+        if (alertas.length === 0) {
+            panel.style.display = 'none';
+            return;
+        }
+
+        panel.style.display = '';
+        body.innerHTML = alertas.map(a => `
+            <div class="alerta-card">
+                <div class="alerta-card-icon ${a.tipo}"><i class='${a.icon}'></i></div>
+                <div class="alerta-card-info">
+                    <strong>${a.titulo}</strong>
+                    <small>${a.detalhe}</small>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error('Erro ao carregar alertas:', e);
+        panel.style.display = 'none';
+    }
+}
+
+// ========== NOTIFICATION BELL (NAVBAR) ==========
+async function loadNotifications() {
+    const list = document.getElementById('notificationList');
+    const countBadge = document.getElementById('notificationCount');
+    if (!list) return;
+
+    try {
+        const now = new Date();
+        const mes = now.getMonth() + 1;
+        const ano = now.getFullYear();
+        const [necRes, naoConfRes] = await Promise.all([
+            fetch(`/api/plantoes/necessidades?mes=${mes}&ano=${ano}`),
+            fetch('/api/plantoes/nao-confirmados')
+        ]);
+
+        const necessidades = necRes.ok ? await necRes.json() : [];
+        const naoConfirmados = naoConfRes.ok ? await naoConfRes.json() : [];
+
+        const items = [];
+
+        // Unfilled needs
+        necessidades.forEach(nec => {
+            const pct = nec.percentualPreenchido || 0;
+            if (pct < 100) {
+                const horasFaltam = Math.max(0, (nec.horasNecessarias || 0) - (nec.horasAgendadas || 0));
+                items.push(`<li><i class='bx bxs-error-circle' style="color:var(--red);margin-right:6px;"></i>${nec.localNome} — faltam ${horasFaltam}h (${Math.round(pct)}%)</li>`);
+            }
+        });
+
+        // Unconfirmed shifts
+        naoConfirmados.forEach(p => {
+            const nome = p.nome || 'Médico';
+            items.push(`<li><i class='bx bxs-time-five' style="color:#eab308;margin-right:6px;"></i>${nome} não confirmou ${formatDate(p.data)}</li>`);
+        });
+
+        // Contracts expiring soon (within 30 days)
+        if (contratosCache && contratosCache.length) {
+            const hoje = new Date();
+            contratosCache.forEach(c => {
+                if (!c.dataFim || (c.status || '').toLowerCase() !== 'ativo') return;
+                const fim = new Date(c.dataFim + 'T00:00:00');
+                const diffDias = Math.ceil((fim - hoje) / (1000 * 60 * 60 * 24));
+                if (diffDias <= 30 && diffDias >= 0) {
+                    items.push(`<li><i class='bx bxs-calendar-exclamation' style="color:#ea580c;margin-right:6px;"></i>Contrato #${c.numero || c.id} vence em ${diffDias} dia(s)</li>`);
+                } else if (diffDias < 0) {
+                    items.push(`<li><i class='bx bxs-error' style="color:var(--red);margin-right:6px;"></i>Contrato #${c.numero || c.id} vencido</li>`);
+                }
+            });
+        }
+
+        if (items.length === 0) {
+            list.innerHTML = '<li style="color:var(--dark-grey);">Sem notificações</li>';
+            if (countBadge) { countBadge.style.display = 'none'; countBadge.textContent = '0'; }
+        } else {
+            list.innerHTML = items.join('');
+            if (countBadge) { countBadge.textContent = items.length; countBadge.style.display = ''; }
+        }
+    } catch (e) {
+        console.error('Erro ao carregar notificações:', e);
+    }
+}
+
+window.addEventListener('load', () => {
+    // Wait a bit for contratosCache to load
+    setTimeout(loadNotifications, 1500);
+});
+
+// Toggle alertas panel collapse
+document.getElementById('toggleAlertasPanel')?.addEventListener('click', () => {
+    const body = document.getElementById('plantoesAlertasBody');
+    const btn = document.getElementById('toggleAlertasPanel');
+    if (!body) return;
+    const isHidden = body.style.display === 'none';
+    body.style.display = isHidden ? '' : 'none';
+    if (btn) btn.innerHTML = isHidden ? "<i class='bx bx-chevron-down'></i>" : "<i class='bx bx-chevron-up'></i>";
+});
+
+// ========== LOCAIS DE ATENDIMENTO (CONTRACT DETAIL) ==========
+let locaisAtendimentoCache = [];
+let editingLocalId = null;
+let localCurrentContratoId = null;
+let localMunicipiosData = null;
+const localAtendimentoModal = document.getElementById('localAtendimentoModal');
+const localAtendimentoForm = document.getElementById('localAtendimentoForm');
+const localNome = document.getElementById('localNome');
+const localUf = document.getElementById('localUf');
+const localMunicipio = document.getElementById('localMunicipio');
+const localEndereco = document.getElementById('localEndereco');
+const localContratoItemId = document.getElementById('localContratoItemId');
+
+async function loadLocalMunicipios() {
+    if (localMunicipiosData) return localMunicipiosData;
+    try {
+        const res = await fetch('/api/municipios');
+        localMunicipiosData = await res.json();
+    } catch (e) { localMunicipiosData = {}; }
+    return localMunicipiosData;
+}
+
+function populateLocalUF(data) {
+    if (!localUf) return;
+    const current = localUf.value;
+    localUf.innerHTML = '<option value="">UF</option>';
+    Object.keys(data).sort().forEach(uf => {
+        const opt = document.createElement('option');
+        opt.value = uf;
+        opt.textContent = uf;
+        localUf.appendChild(opt);
+    });
+    if (current) localUf.value = current;
+}
+
+function populateLocalMunicipios(uf) {
+    if (!localMunicipio) return;
+    if (!uf || !localMunicipiosData || !localMunicipiosData[uf]) {
+        localMunicipio.innerHTML = '<option value="">Selecione a UF primeiro</option>';
+        localMunicipio.disabled = true;
+        return;
+    }
+    const cities = localMunicipiosData[uf];
+    localMunicipio.innerHTML = '<option value="">Selecione o município</option>';
+    cities.forEach(city => {
+        const opt = document.createElement('option');
+        opt.value = city;
+        opt.textContent = city;
+        localMunicipio.appendChild(opt);
+    });
+    localMunicipio.disabled = false;
+}
+
+if (localUf) {
+    localUf.addEventListener('change', () => populateLocalMunicipios(localUf.value));
+}
+
+async function loadContratoLocais(contratoId) {
+    localCurrentContratoId = contratoId;
+    const body = document.getElementById('contratoDetalheLocaisBody');
+    const countBadge = document.getElementById('locaisCountBadge');
+    if (!body) return;
+
+    try {
+        const res = await fetch(`/api/locais/contrato/${contratoId}`);
+        locaisAtendimentoCache = await res.json();
+    } catch (e) {
+        locaisAtendimentoCache = [];
+    }
+
+    // Update count badge
+    if (countBadge) {
+        if (locaisAtendimentoCache.length > 0) {
+            countBadge.textContent = locaisAtendimentoCache.length;
+            countBadge.style.display = '';
+        } else {
+            countBadge.style.display = 'none';
+        }
+    }
+
+    if (locaisAtendimentoCache.length === 0) {
+        body.innerHTML = `<div class="locais-empty">
+            <i class='bx bxs-map-alt'></i>
+            <p>Nenhum local de atendimento cadastrado</p>
+            <small>Clique em <strong>"Novo Local"</strong> para cadastrar o primeiro ponto de atendimento deste contrato.</small>
+        </div>`;
+        return;
+    }
+
+    let html = '<div class="locais-grid">';
+    for (const local of locaisAtendimentoCache) {
+        const locationParts = [local.municipio, local.uf].filter(Boolean);
+        const locationStr = locationParts.join(' - ') || 'Localização não informada';
+        const itemLabel = local.itemDescricao
+            ? `#${local.numeroItem || ''} - ${local.itemDescricao.substring(0, 70)}${local.itemDescricao.length > 70 ? '...' : ''}`
+            : null;
+
+        // Programming period tags
+        let progHtml = '';
+        if (local.cargaHorariaDiaria || local.diasSemana || local.dataInicioProgramacao) {
+            const tags = [];
+            if (local.cargaHorariaDiaria) tags.push(`<span class="local-prog-tag"><i class='bx bxs-time'></i> ${local.cargaHorariaDiaria}h/dia</span>`);
+            if (local.horasSemanais) tags.push(`<span class="local-prog-tag"><i class='bx bxs-calendar-week'></i> ${local.horasSemanais}h/sem</span>`);
+            if (local.vagasProfissionais && local.vagasProfissionais > 1) tags.push(`<span class="local-prog-tag"><i class='bx bxs-user-plus'></i> ${local.vagasProfissionais} vagas</span>`);
+            if (local.diasSemana) {
+                const diasMap = { seg: 'Seg', ter: 'Ter', qua: 'Qua', qui: 'Qui', sex: 'Sex', sab: 'Sáb', dom: 'Dom' };
+                const diasArr = local.diasSemana.split(',').map(d => diasMap[d.trim()] || d.trim()).filter(Boolean);
+                if (diasArr.length) tags.push(`<span class="local-prog-tag"><i class='bx bxs-calendar'></i> ${diasArr.join(', ')}</span>`);
+            }
+            if (local.dataInicioProgramacao && local.dataFimProgramacao) {
+                tags.push(`<span class="local-prog-tag"><i class='bx bxs-calendar-check'></i> ${formatDate(local.dataInicioProgramacao)} - ${formatDate(local.dataFimProgramacao)}</span>`);
+            }
+            if (tags.length) progHtml = `<div class="local-card-programacao">${tags.join('')}</div>`;
+        }
+
+        html += `<div class="local-card" data-local-id="${local.id}">
+            <div class="local-card-header">
+                <div class="local-card-icon"><i class='bx bxs-clinic'></i></div>
+                <div class="local-card-actions">
+                    <button data-action="edit-local" data-id="${local.id}" title="Editar"><i class='bx bxs-edit'></i></button>
+                    <button class="danger" data-action="delete-local" data-id="${local.id}" title="Excluir"><i class='bx bxs-trash'></i></button>
+                </div>
+            </div>
+            <div class="local-card-name">${local.nome}</div>
+            <div class="local-card-details">
+                <div class="local-card-detail"><i class='bx bxs-map'></i> ${locationStr}</div>
+                ${local.endereco ? `<div class="local-card-detail"><i class='bx bxs-map-pin'></i> ${local.endereco}</div>` : ''}
+            </div>
+            ${itemLabel ? `<div class="local-card-pncp"><span class="pncp-item-badge" title="${local.itemDescricao}">${itemLabel}</span></div>` : ''}
+            ${progHtml}
+        </div>`;
+    }
+    html += '</div>';
+    body.innerHTML = html;
+
+    // Bind actions
+    body.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+            if (action === 'edit-local') {
+                const local = locaisAtendimentoCache.find(l => String(l.id) === String(id));
+                if (local) openLocalModal(local);
+            } else if (action === 'delete-local') {
+                if (!confirm('Deseja excluir este local de atendimento?')) return;
+                try {
+                    await fetch(`/api/locais/${id}`, { method: 'DELETE' });
+                    loadContratoLocais(localCurrentContratoId);
+                } catch (e) { console.error(e); }
+            }
+        });
+    });
+}
+
+async function loadContratoItensForSelect(contratoId) {
+    if (!localContratoItemId) return;
+    localContratoItemId.innerHTML = '<option value="">Nenhum (sem vínculo PNCP)</option>';
+    try {
+        const res = await fetch(`/api/contratos/${contratoId}/itens`);
+        const itens = await res.json();
+        itens.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            const fullText = `#${item.numeroItem || ''} - ${item.descricao || ''}`;
+            opt.textContent = fullText.length > 80 ? fullText.substring(0, 80) + '...' : fullText;
+            opt.dataset.fullText = fullText;
+            localContratoItemId.appendChild(opt);
+        });
+    } catch (e) { console.error(e); }
+}
+
+async function openLocalModal(local = null) {
+    if (!localAtendimentoModal) return;
+
+    // Set modal title
+    const titleEl = document.getElementById('localModalTitle');
+    if (titleEl) titleEl.textContent = local ? 'Editar Local de Atendimento' : 'Novo Local de Atendimento';
+
+    // Load municipios for UF cascade
+    const data = await loadLocalMunicipios();
+    populateLocalUF(data);
+
+    // Load PNCP items for select
+    await loadContratoItensForSelect(localCurrentContratoId);
+
+    if (local) {
+        editingLocalId = local.id;
+        if (localNome) localNome.value = local.nome || '';
+        if (localEndereco) localEndereco.value = local.endereco || '';
+        if (localContratoItemId) {
+            localContratoItemId.value = local.contratoItemId || '';
+            localContratoItemId.dispatchEvent(new Event('change'));
+        }
+        if (local.uf && localUf) {
+            localUf.value = local.uf;
+            populateLocalMunicipios(local.uf);
+            if (localMunicipio) localMunicipio.value = local.municipio || '';
+        }
+        // Programming fields
+        const cargaEl = document.getElementById('localCargaDiaria');
+        const horasEl = document.getElementById('localHorasSemanais');
+        const vagasEl = document.getElementById('localVagas');
+        const inicioEl = document.getElementById('localDataInicio');
+        const fimEl = document.getElementById('localDataFim');
+        if (cargaEl) cargaEl.value = local.cargaHorariaDiaria || '';
+        if (horasEl) horasEl.value = local.horasSemanais || '';
+        if (vagasEl) vagasEl.value = local.vagasProfissionais || 1;
+        if (inicioEl) inicioEl.value = local.dataInicioProgramacao || '';
+        if (fimEl) fimEl.value = local.dataFimProgramacao || '';
+        // Dias da semana checkboxes
+        const diasSemana = (local.diasSemana || '').split(',').map(d => d.trim()).filter(Boolean);
+        document.querySelectorAll('#localDiasSemana input[type="checkbox"]').forEach(cb => {
+            cb.checked = diasSemana.includes(cb.value);
+        });
+    } else {
+        editingLocalId = null;
+        if (localAtendimentoForm) localAtendimentoForm.reset();
+        if (localMunicipio) {
+            localMunicipio.innerHTML = '<option value="">Selecione a UF primeiro</option>';
+            localMunicipio.disabled = true;
+        }
+        // Reset programming checkboxes
+        document.querySelectorAll('#localDiasSemana input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+        // Hide item preview
+        const preview = document.getElementById('localItemPreview');
+        if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
+    }
+
+    localAtendimentoModal.classList.add('show');
+    localAtendimentoModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeLocalModal() {
+    if (!localAtendimentoModal) return;
+    localAtendimentoModal.classList.remove('show');
+    localAtendimentoModal.setAttribute('aria-hidden', 'true');
+}
+
+document.getElementById('novoLocalAtendimentoBtn')?.addEventListener('click', () => openLocalModal());
+document.getElementById('fecharLocalModal')?.addEventListener('click', closeLocalModal);
+document.getElementById('cancelarLocalModal')?.addEventListener('click', closeLocalModal);
+if (localAtendimentoModal) localAtendimentoModal.addEventListener('click', e => { if (e.target === localAtendimentoModal) closeLocalModal(); });
+
+// Show full item text preview when selecting PNCP item
+if (localContratoItemId) {
+    localContratoItemId.addEventListener('change', () => {
+        const preview = document.getElementById('localItemPreview');
+        if (!preview) return;
+        const selected = localContratoItemId.options[localContratoItemId.selectedIndex];
+        if (selected && selected.value) {
+            const fullText = selected.dataset.fullText || selected.textContent;
+            preview.innerHTML = `<i class='bx bxs-purchase-tag'></i> ${fullText}`;
+            preview.style.display = '';
+        } else {
+            preview.style.display = 'none';
+            preview.innerHTML = '';
+        }
+    });
+}
+
+if (localAtendimentoForm) {
+    localAtendimentoForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        // Collect dias da semana from checkboxes
+        const diasChecked = [];
+        document.querySelectorAll('#localDiasSemana input[type="checkbox"]:checked').forEach(cb => diasChecked.push(cb.value));
+
+        const payload = {
+            contratoId: localCurrentContratoId,
+            contratoItemId: localContratoItemId ? Number(localContratoItemId.value) || null : null,
+            nome: localNome ? localNome.value.trim() : '',
+            municipio: localMunicipio ? localMunicipio.value.trim() : '',
+            uf: localUf ? localUf.value : '',
+            endereco: localEndereco ? localEndereco.value.trim() : '',
+            cargaHorariaDiaria: Number(document.getElementById('localCargaDiaria')?.value) || null,
+            horasSemanais: Number(document.getElementById('localHorasSemanais')?.value) || null,
+            vagasProfissionais: Number(document.getElementById('localVagas')?.value) || 1,
+            diasSemana: diasChecked.join(','),
+            dataInicioProgramacao: document.getElementById('localDataInicio')?.value || null,
+            dataFimProgramacao: document.getElementById('localDataFim')?.value || null
+        };
+
+        try {
+            const url = editingLocalId ? `/api/locais/${editingLocalId}` : '/api/locais';
+            const method = editingLocalId ? 'PUT' : 'POST';
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!res.ok) throw new Error('Falha ao salvar local');
+            closeLocalModal();
+            loadContratoLocais(localCurrentContratoId);
+        } catch (err) { console.error(err); }
+    });
+}
+
+// ========== PNCP ITEMS SYNC FOR CONTRACTS ==========
+// When opening contract detail, auto-sync PNCP items to local DB
+async function syncContratoItensPncp(contratoId, pncpNumeroControle) {
+    if (!contratoId || !pncpNumeroControle) return;
+    try {
+        await fetch(`/api/contratos/${contratoId}/itens/sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pncpNumeroControle })
+        });
+    } catch (e) {
+        console.error('Erro ao sincronizar itens PNCP:', e);
+    }
+}
+
+// ========== ATENDIMENTOS ==========
+let atendimentosCache = [];
+let editingAtendimentoId = null;
+const atendimentosTableBody = document.getElementById('atendimentosTableBody');
+const atendimentoModal = document.getElementById('atendimentoModal');
+const atendimentoForm = document.getElementById('atendimentoForm');
+const atendFilterStatus = document.getElementById('atendFilterStatus');
+const atendFilterContrato = document.getElementById('atendFilterContrato');
+const atendFilterMedico = document.getElementById('atendFilterMedico');
+const atendFilterPeriodo = document.getElementById('atendFilterPeriodo');
+const atendResumoTotal = document.getElementById('atendResumoTotal');
+const atendResumoConcluidos = document.getElementById('atendResumoConcluidos');
+const atendResumoPacientes = document.getElementById('atendResumoPacientes');
+const atendResumoHoras = document.getElementById('atendResumoHoras');
+
+function getAtendStatusMeta(status) {
+    switch (status) {
+        case 'concluido': return { label: 'Concluído', css: 'completed' };
+        case 'em_andamento': return { label: 'Em andamento', css: 'process' };
+        case 'cancelado': return { label: 'Cancelado', css: 'pending' };
+        default: return { label: 'Pendente', css: 'pending' };
+    }
+}
+
+function buildAtendimentoRow(atend) {
+    const row = document.createElement('tr');
+    const sm = getAtendStatusMeta(atend.status);
+    const medicoNome = atend.medicoNome || 'Não informado';
+    const avatarHtml = atend.fotoUrl
+        ? `<img src="${atend.fotoUrl}" alt="${medicoNome}">`
+        : `<div class="plantao-avatar-sm"><i class='bx bxs-user'></i></div>`;
+    const contratoLabel = atend.contratoNumero ? `#${atend.contratoNumero}` : '<span style="color:var(--dark-grey)">Avulso</span>';
+    const localNome = atend.localNome || '-';
+    const localMun = atend.localMunicipio || '';
+    const localLabel = localMun ? `${localNome}, ${localMun}` : localNome;
+    const horario = (atend.horaInicio && atend.horaFim)
+        ? `<span class="atend-horario-badge"><i class='bx bxs-time'></i> ${atend.horaInicio} - ${atend.horaFim}</span>`
+        : (atend.horaInicio ? `<span class="atend-horario-badge"><i class='bx bxs-time'></i> ${atend.horaInicio}</span>` : '-');
+    const cargaHtml = atend.cargaHorariaRealizada ? `<span class="plantao-carga-badge"><i class='bx bxs-time'></i> ${atend.cargaHorariaRealizada}h</span>` : '-';
+    const pacientes = atend.pacientesAtendidos ? `<span class="atend-pacientes-badge"><i class='bx bxs-group'></i> ${atend.pacientesAtendidos}</span>` : '<span style="color:var(--dark-grey)">0</span>';
+
+    row.innerHTML = `
+        <td>${formatDate(atend.data)}</td>
+        <td>
+            <div class="plantao-medico-cell">
+                ${avatarHtml}
+                <a class="plantao-medico-name" data-medico-id="${atend.medicoId}">${medicoNome}</a>
+            </div>
+        </td>
+        <td>${contratoLabel}</td>
+        <td>${localLabel}</td>
+        <td>${horario}</td>
+        <td>${cargaHtml}</td>
+        <td>${pacientes}</td>
+        <td><span class="status ${sm.css}">${sm.label}</span></td>
+        <td>
+            <div class="actions">
+                <button class="btn-icon" data-action="edit-atend" data-id="${atend.id}" title="Editar"><i class='bx bxs-edit'></i></button>
+                <button class="btn-icon danger" data-action="delete-atend" data-id="${atend.id}" title="Excluir"><i class='bx bxs-trash'></i></button>
+            </div>
+        </td>
+    `;
+    return row;
+}
+
+function renderAtendimentosTable(items) {
+    if (!atendimentosTableBody) return;
+    if (!items || items.length === 0) {
+        atendimentosTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--dark-grey)">Nenhum atendimento cadastrado.</td></tr>';
+        return;
+    }
+    atendimentosTableBody.innerHTML = '';
+    items.forEach(a => atendimentosTableBody.appendChild(buildAtendimentoRow(a)));
+}
+
+function updateAtendFilters(items) {
+    if (atendFilterContrato) {
+        const contratos = [...new Map(items.filter(a => a.contratoNumero).map(a => [a.contratoId, a.contratoNumero])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+        atendFilterContrato.innerHTML = '<option value="">Todos</option>';
+        contratos.forEach(([id, num]) => {
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = `#${num}`;
+            atendFilterContrato.appendChild(opt);
+        });
+    }
+    if (atendFilterMedico) {
+        const medicos = [...new Map(items.filter(a => a.medicoNome).map(a => [a.medicoId, a.medicoNome])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+        atendFilterMedico.innerHTML = '<option value="">Todos</option>';
+        medicos.forEach(([id, nome]) => {
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = nome;
+            atendFilterMedico.appendChild(opt);
+        });
+    }
+}
+
+function applyAtendFilters() {
+    const statusF = atendFilterStatus ? atendFilterStatus.value : '';
+    const contratoF = atendFilterContrato ? atendFilterContrato.value : '';
+    const medicoF = atendFilterMedico ? atendFilterMedico.value : '';
+    const periodoF = atendFilterPeriodo ? atendFilterPeriodo.value : '';
+    const range = parseDateRange(periodoF);
+
+    const filtered = atendimentosCache.filter(a => {
+        if (statusF && a.status !== statusF) return false;
+        if (contratoF && String(a.contratoId) !== String(contratoF)) return false;
+        if (medicoF && String(a.medicoId) !== String(medicoF)) return false;
+        if (range.start || range.end) {
+            const d = parseDateInput(a.data) || new Date(a.data);
+            if (isNaN(d.getTime())) return false;
+            if (range.start && d < range.start) return false;
+            if (range.end && d > range.end) return false;
+        }
+        return true;
+    });
+
+    renderAtendimentosTable(filtered);
+}
+
+function updateAtendResumo(items) {
+    let concluidos = 0, pacientes = 0, horas = 0;
+    items.forEach(a => {
+        if (a.status === 'concluido') concluidos++;
+        pacientes += (a.pacientesAtendidos || 0);
+        horas += (a.cargaHorariaRealizada || 0);
+    });
+    if (atendResumoTotal) atendResumoTotal.textContent = items.length;
+    if (atendResumoConcluidos) atendResumoConcluidos.textContent = concluidos;
+    if (atendResumoPacientes) atendResumoPacientes.textContent = pacientes;
+    if (atendResumoHoras) atendResumoHoras.textContent = `${horas}h`;
+}
+
+async function loadAtendimentos() {
+    if (!atendimentosTableBody) return;
+    atendimentosTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--dark-grey)">Carregando atendimentos...</td></tr>';
+
+    try {
+        const res = await fetch('/api/atendimentos');
+        if (!res.ok) throw new Error('Falha ao carregar atendimentos');
+        atendimentosCache = await res.json();
+        updateAtendFilters(atendimentosCache);
+        updateAtendResumo(atendimentosCache);
+        applyAtendFilters();
+    } catch (error) {
+        atendimentosTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--dark-grey)">Erro ao carregar atendimentos.</td></tr>';
+        console.error(error);
+    }
+}
+
+// Sync selects for atendimento modal
+function syncAtendContratosOptions() {
+    const sel = document.getElementById('atendContratoId');
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Selecione</option>';
+    contratosCache.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        const num = c.numero ? `#${c.numero}` : `#${c.id}`;
+        opt.textContent = c.orgao ? `${num} - ${c.orgao}` : num;
+        sel.appendChild(opt);
+    });
+    if (cur) sel.value = cur;
+}
+
+function syncAtendMedicosOptions() {
+    const sel = document.getElementById('atendMedicoId');
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Selecione</option>';
+    medicosCache.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = `${m.nome} (CRM: ${m.crm || 'N/A'})`;
+        sel.appendChild(opt);
+    });
+    if (cur) sel.value = cur;
+}
+
+async function loadAtendLocaisForContrato(contratoId) {
+    const sel = document.getElementById('atendLocalId');
+    if (!sel) return;
+    if (!contratoId) {
+        sel.innerHTML = '<option value="">Selecione o contrato primeiro</option>';
+        sel.disabled = true;
+        return;
+    }
+    try {
+        const res = await fetch(`/api/locais/contrato/${contratoId}`);
+        const locais = await res.json();
+        sel.innerHTML = '<option value="">Selecione o local</option>';
+        locais.forEach(l => {
+            const opt = document.createElement('option');
+            opt.value = l.id;
+            opt.textContent = `${l.nome}${l.municipio ? ' - ' + l.municipio : ''}`;
+            sel.appendChild(opt);
+        });
+        sel.disabled = locais.length === 0;
+    } catch (e) {
+        sel.innerHTML = '<option value="">Erro ao carregar locais</option>';
+    }
+}
+
+async function loadPlantoesSemAtendimento() {
+    const sel = document.getElementById('atendPlantaoId');
+    if (!sel) return;
+    try {
+        const res = await fetch('/api/plantoes/sem-atendimento');
+        const plantoes = await res.json();
+        sel.innerHTML = '<option value="">Sem vínculo (avulso)</option>';
+        plantoes.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            const data = formatDate(p.data);
+            const medico = p.nome || 'N/A';
+            const contrato = p.contratoNumero ? `#${p.contratoNumero}` : '';
+            opt.textContent = `${data} - ${medico}${contrato ? ` (${contrato})` : ''}`;
+            sel.appendChild(opt);
+        });
+    } catch (e) { console.error(e); }
+}
+
+// Contract change in atendimento form -> load locais
+document.getElementById('atendContratoId')?.addEventListener('change', function() {
+    loadAtendLocaisForContrato(this.value);
+});
+
+// Auto-calculate carga realizada from hora início/fim
+function calcAtendCarga() {
+    const ini = document.getElementById('atendHoraInicio')?.value;
+    const fim = document.getElementById('atendHoraFim')?.value;
+    const campo = document.getElementById('atendCargaRealizada');
+    if (!campo) return;
+    if (!ini || !fim) { campo.value = ''; return; }
+    const [h1, m1] = ini.split(':').map(Number);
+    const [h2, m2] = fim.split(':').map(Number);
+    let mins = (h2 * 60 + m2) - (h1 * 60 + m1);
+    if (mins < 0) mins += 24 * 60; // overnight
+    const horas = Math.round(mins / 30) * 0.5; // round to nearest 0.5h
+    campo.value = horas > 0 ? `${horas}h` : '';
+}
+document.getElementById('atendHoraInicio')?.addEventListener('change', calcAtendCarga);
+document.getElementById('atendHoraFim')?.addEventListener('change', calcAtendCarga);
+
+// Plantão change in atendimento form -> auto-fill fields
+document.getElementById('atendPlantaoId')?.addEventListener('change', async function() {
+    const plantaoId = this.value;
+    if (!plantaoId) return;
+    // Find plantão in some cache or fetch
+    try {
+        const allPlantoes = await fetch('/api/plantoes').then(r => r.json());
+        const p = allPlantoes.find(pl => String(pl.id) === String(plantaoId));
+        if (p) {
+            const medicoSel = document.getElementById('atendMedicoId');
+            const contratoSel = document.getElementById('atendContratoId');
+            const dataSel = document.getElementById('atendData');
+            if (medicoSel) medicoSel.value = p.medicoId || '';
+            if (contratoSel) {
+                contratoSel.value = p.contratoId || '';
+                if (p.contratoId) await loadAtendLocaisForContrato(p.contratoId);
+            }
+            if (dataSel) dataSel.value = String(p.data || '').slice(0, 10);
+            const localSel = document.getElementById('atendLocalId');
+            if (localSel && p.localAtendimentoId) {
+                setTimeout(() => { localSel.value = p.localAtendimentoId; }, 300);
+            }
+        }
+    } catch (e) { console.error(e); }
+});
+
+async function openAtendimentoModal(atend = null) {
+    if (!atendimentoModal) return;
+
+    // Sync contratos and medicos
+    if (contratosCache.length === 0) await loadContratos();
+    syncAtendContratosOptions();
+    if (medicosCache.length === 0) await loadMedicos();
+    syncAtendMedicosOptions();
+    await loadPlantoesSemAtendimento();
+
+    const localSel = document.getElementById('atendLocalId');
+    if (localSel) {
+        localSel.innerHTML = '<option value="">Selecione o contrato primeiro</option>';
+        localSel.disabled = true;
+    }
+
+    if (atend) {
+        editingAtendimentoId = atend.id;
+        const fields = {
+            atendPlantaoId: atend.plantaoId || '',
+            atendContratoId: atend.contratoId || '',
+            atendMedicoId: atend.medicoId || '',
+            atendData: String(atend.data || '').slice(0, 10),
+            atendHoraInicio: atend.horaInicio || '',
+            atendHoraFim: atend.horaFim || '',
+            atendPacientes: atend.pacientesAtendidos || '',
+            atendStatus: atend.status || 'pendente',
+            atendProcedimentos: atend.procedimentos || '',
+            atendObservacoes: atend.observacoes || ''
+        };
+        for (const [id, val] of Object.entries(fields)) {
+            const el = document.getElementById(id);
+            if (el) el.value = val;
+        }
+        calcAtendCarga(); // auto-calculate from hora início/fim
+        if (atend.contratoId) {
+            await loadAtendLocaisForContrato(atend.contratoId);
+            if (localSel && atend.localAtendimentoId) localSel.value = atend.localAtendimentoId;
+        }
+    } else {
+        editingAtendimentoId = null;
+        if (atendimentoForm) atendimentoForm.reset();
+    }
+
+    atendimentoModal.classList.add('show');
+    atendimentoModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeAtendimentoModal() {
+    if (!atendimentoModal) return;
+    atendimentoModal.classList.remove('show');
+    atendimentoModal.setAttribute('aria-hidden', 'true');
+}
+
+document.getElementById('novoAtendimentoBtn')?.addEventListener('click', () => openAtendimentoModal());
+document.getElementById('fecharAtendimentoModal')?.addEventListener('click', closeAtendimentoModal);
+if (atendimentoModal) atendimentoModal.addEventListener('click', e => { if (e.target === atendimentoModal) closeAtendimentoModal(); });
+
+if (atendimentoForm) {
+    atendimentoForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const payload = {
+            plantaoId: Number(document.getElementById('atendPlantaoId')?.value) || null,
+            contratoId: Number(document.getElementById('atendContratoId')?.value) || null,
+            localAtendimentoId: Number(document.getElementById('atendLocalId')?.value) || null,
+            medicoId: Number(document.getElementById('atendMedicoId')?.value) || null,
+            data: document.getElementById('atendData')?.value || '',
+            horaInicio: document.getElementById('atendHoraInicio')?.value || null,
+            horaFim: document.getElementById('atendHoraFim')?.value || null,
+            cargaHorariaRealizada: parseFloat(String(document.getElementById('atendCargaRealizada')?.value || '0').replace(/[^0-9.]/g, '')) || null,
+            pacientesAtendidos: Number(document.getElementById('atendPacientes')?.value) || 0,
+            status: document.getElementById('atendStatus')?.value || 'pendente',
+            procedimentos: document.getElementById('atendProcedimentos')?.value?.trim() || null,
+            observacoes: document.getElementById('atendObservacoes')?.value?.trim() || null,
+            descricao: document.getElementById('atendProcedimentos')?.value?.trim() || null
+        };
+
+        try {
+            const url = editingAtendimentoId ? `/api/atendimentos/${editingAtendimentoId}` : '/api/atendimentos';
+            const method = editingAtendimentoId ? 'PUT' : 'POST';
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.erro || 'Falha ao salvar atendimento');
+            }
+            closeAtendimentoModal();
+            await loadAtendimentos();
+        } catch (error) {
+            alert(error.message);
+            console.error(error);
+        }
+    });
+}
+
+// Table click handlers
+if (atendimentosTableBody) {
+    atendimentosTableBody.addEventListener('click', async e => {
+        const btn = e.target.closest('button[data-action]');
+        if (btn) {
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+            if (action === 'edit-atend') {
+                const atend = atendimentosCache.find(a => String(a.id) === String(id));
+                if (atend) openAtendimentoModal(atend);
+            } else if (action === 'delete-atend') {
+                if (!confirm('Deseja excluir este atendimento?')) return;
+                try {
+                    await fetch(`/api/atendimentos/${id}`, { method: 'DELETE' });
+                    await loadAtendimentos();
+                } catch (err) { console.error(err); }
+            }
+        }
+        // Click on médico name
+        const medicoLink = e.target.closest('.plantao-medico-name');
+        if (medicoLink) {
+            e.preventDefault();
+            const medicoId = medicoLink.dataset.medicoId;
+            if (medicoId && typeof openMedicoDetalhePage === 'function') openMedicoDetalhePage(medicoId);
+        }
+    });
+}
+
+// Filter listeners
+if (atendFilterStatus) atendFilterStatus.addEventListener('change', applyAtendFilters);
+if (atendFilterContrato) atendFilterContrato.addEventListener('change', applyAtendFilters);
+if (atendFilterMedico) atendFilterMedico.addEventListener('change', applyAtendFilters);
+if (atendFilterPeriodo) atendFilterPeriodo.addEventListener('input', applyAtendFilters);

@@ -17,30 +17,9 @@ class EditaisController {
   // POST /api/editais - Criar novo edital
   async criar(req, res) {
     try {
-      const edital = await EditaisService.criarEdital(req.body);
+      const { numero, orgao, tipoOrgao, estado, municipio, vigencia } = req.body;
+      const edital = await EditaisService.criarEdital(numero, orgao, tipoOrgao, estado, municipio, vigencia);
       res.status(201).json(edital);
-    } catch (erro) {
-      res.status(400).json({ erro: erro.message });
-    }
-  }
-
-  // POST /api/editais/analisar - Analisar PDF do edital
-  async analisar(req, res) {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ erro: 'Arquivo PDF não enviado' });
-      }
-
-      let annexLinks = [];
-      if (req.body && req.body.annexLinks) {
-        try {
-          annexLinks = JSON.parse(req.body.annexLinks);
-        } catch (parseError) {
-          annexLinks = [];
-        }
-      }
-      const resultado = await EditaisService.analisarEditalPdf(req.file.buffer, req.file.originalname, annexLinks);
-      res.json(resultado);
     } catch (erro) {
       res.status(400).json({ erro: erro.message });
     }
@@ -63,17 +42,6 @@ class EditaisController {
       const { id } = req.params;
       const resultado = await EditaisService.deletarEdital(id);
       res.json(resultado);
-    } catch (erro) {
-      res.status(400).json({ erro: erro.message });
-    }
-  }
-
-  // PUT /api/editais/:id - Atualizar edital
-  async atualizar(req, res) {
-    try {
-      const { id } = req.params;
-      const edital = await EditaisService.atualizarEdital(id, req.body);
-      res.json(edital);
     } catch (erro) {
       res.status(400).json({ erro: erro.message });
     }

@@ -5,18 +5,19 @@ const Contrato = require('../models/Contrato');
 
 class ContratosService {
   // Criar contrato com validações
-  async criarContrato(dados) {
-    const { editalId, dataInicio, dataFim } = dados;
+  async criarContrato(editalId, dataInicio, dataFim) {
+    // Validar campos obrigatórios
     if (!editalId || !dataInicio || !dataFim) {
       throw new Error('Edital, data de início e data de fim são obrigatórios');
     }
 
+    // Validar datas
     if (new Date(dataInicio) >= new Date(dataFim)) {
       throw new Error('Data de início deve ser menor que data de fim');
     }
 
     try {
-      const contrato = await Contrato.criar(dados);
+      const contrato = await Contrato.criar(editalId, dataInicio, dataFim);
       return contrato;
     } catch (erro) {
       throw new Error(`Erro ao criar contrato: ${erro.message}`);
@@ -43,16 +44,6 @@ class ContratosService {
       return contrato;
     } catch (erro) {
       throw new Error(`Erro ao buscar contrato: ${erro.message}`);
-    }
-  }
-
-  // Atualizar contrato
-  async atualizarContrato(id, dados) {
-    try {
-      const contrato = await Contrato.atualizar(id, dados);
-      return contrato;
-    } catch (erro) {
-      throw new Error(`Erro ao atualizar contrato: ${erro.message}`);
     }
   }
 

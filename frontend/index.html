@@ -112,13 +112,11 @@
 			<!-- Notification Bell com dropdown -->
 			<a href="#" class="notification" id="notificationIcon">
 				<i class='bx bxs-bell bx-tada-hover' ></i>
-				<span class="num">3</span>
+				<span class="num" id="notificationCount" style="display:none;">0</span>
 			</a>
 			<div class="notification-menu" id="notificationMenu">
-				<ul>
-					<li>Contrato #001 vencido - ação requerida</li>
-					<li>Médico não confirmou plantão amanhã</li>
-					<li>Novo edital publicado em SP</li>
+				<ul id="notificationList">
+					<li style="color:var(--dark-grey);">Sem notificações</li>
 				</ul>
 			</div>
 
@@ -840,6 +838,7 @@
 						<a href="#" target="_blank" rel="noopener" id="contratoDetalhePncpLinkBtn" class="btn-pncp-header" style="display:none;">
 							<i class='bx bxs-cloud-download'></i> Ver no PNCP
 						</a>
+						<button class="btn-secondary" id="contratoDetalheVoltarBtn"><i class='bx bx-arrow-back'></i> Voltar</button>
 					</div>
 				</div>
 
@@ -878,6 +877,7 @@
 				<!-- Tab Navigation -->
 				<div class="edital-detalhe-tabs" id="contratoDetalheTabs">
 					<button class="edital-tab active" data-contrato-tab="detalhes"><i class='bx bxs-file-doc'></i> Detalhes</button>
+					<button class="edital-tab" data-contrato-tab="locais"><i class='bx bxs-map'></i> Locais de Atendimento</button>
 					<button class="edital-tab" data-contrato-tab="itens" id="contratoTabItens" style="display:none;"><i class='bx bx-list-ol'></i> Itens PNCP</button>
 					<button class="edital-tab" data-contrato-tab="arquivos" id="contratoTabArquivos" style="display:none;"><i class='bx bx-file'></i> Arquivos</button>
 				</div>
@@ -890,13 +890,127 @@
 								<h3><i class='bx bxs-file-doc' style="margin-right:6px;"></i> Informações do Contrato</h3>
 								<div class="contratos-actions" style="gap:8px;display:flex;">
 									<button class="btn-primary" id="contratoDetalheEditarBtn"><i class='bx bxs-edit'></i> Editar</button>
-									<button class="btn-secondary" id="contratoDetalheVoltarBtn"><i class='bx bx-arrow-back'></i> Voltar</button>
 								</div>
 							</div>
 							<div id="contratoDetalheConteudo" class="edital-view-body" style="padding:16px 0;">
 								<p>Carregando...</p>
 							</div>
 						</div>
+					</div>
+				</div>
+
+				<!-- Tab: Locais de Atendimento -->
+				<div class="contrato-tab-content" data-contrato-tab-content="locais">
+					<div class="contratos-card">
+						<div class="head">
+							<h3><i class='bx bxs-map' style="margin-right:6px;"></i> Locais de Atendimento <span id="locaisCountBadge" class="locais-count-badge" style="display:none;">0</span></h3>
+							<div class="contratos-actions">
+								<button class="btn-primary" id="novoLocalAtendimentoBtn"><i class='bx bx-plus'></i> Novo Local</button>
+							</div>
+						</div>
+						<p class="locais-tab-subtitle">Gerencie os locais de atendimento vinculados a este contrato. Cada local pode ser associado a um item PNCP da contratação.</p>
+						<div id="contratoDetalheLocaisBody">
+							<div class="locais-loading"><i class='bx bx-loader-alt bx-spin'></i> Carregando locais...</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Modal: Novo/Editar Local de Atendimento -->
+				<div class="modal" id="localAtendimentoModal" aria-hidden="true">
+					<div class="modal-content" style="max-width:750px;">
+						<div class="modal-header">
+							<h3><i class='bx bxs-map' style="margin-right:6px;color:var(--blue);"></i> <span id="localModalTitle">Novo Local de Atendimento</span></h3>
+							<button class="modal-close" type="button" id="fecharLocalModal">&times;</button>
+						</div>
+						<form id="localAtendimentoForm" class="local-form">
+							<div class="local-form-hint">
+								<i class='bx bx-info-circle'></i>
+								<span>Cadastre o ponto de atendimento vinculado a este contrato. Associe a um item PNCP para rastreabilidade.</span>
+							</div>
+
+							<div class="form-group">
+								<label for="localNome"><i class='bx bxs-clinic' style="margin-right:4px;"></i> Nome do Local *</label>
+								<input type="text" id="localNome" placeholder="Ex: UBS Central, Hospital Municipal, Pronto Atendimento..." required>
+							</div>
+
+							<div class="form-row">
+								<div class="form-group" style="flex:0 0 90px;">
+									<label for="localUf">UF</label>
+									<select id="localUf">
+										<option value="">UF</option>
+									</select>
+								</div>
+								<div class="form-group" style="flex:1;">
+									<label for="localMunicipio">Município</label>
+									<select id="localMunicipio" disabled>
+										<option value="">Selecione a UF primeiro</option>
+									</select>
+								</div>
+							</div>
+
+							<div class="form-group">
+								<label for="localEndereco"><i class='bx bxs-map-pin' style="margin-right:4px;"></i> Endereço</label>
+								<input type="text" id="localEndereco" placeholder="Rua, número, bairro, CEP...">
+							</div>
+
+							<div class="form-group">
+								<label for="localContratoItemId"><i class='bx bxs-purchase-tag' style="margin-right:4px;"></i> Item PNCP vinculado</label>
+								<select id="localContratoItemId">
+									<option value="">Nenhum (sem vínculo PNCP)</option>
+								</select>
+								<div class="local-item-preview" id="localItemPreview" style="display:none;"></div>
+								<small class="form-help">Vincular a um item da contratação permite rastrear custos e produtividade.</small>
+							</div>
+
+							<!-- Seção: Programação de Plantões -->
+							<div class="local-form-section-title">
+								<i class='bx bxs-calendar'></i> Programação de Plantões
+							</div>
+
+							<div class="form-row">
+								<div class="form-group" style="flex:1;">
+									<label for="localCargaDiaria">Carga horária diária</label>
+									<input type="number" id="localCargaDiaria" min="1" max="24" step="1" placeholder="Ex: 8">
+								</div>
+								<div class="form-group" style="flex:1;">
+									<label for="localHorasSemanais">Horas semanais</label>
+									<input type="number" id="localHorasSemanais" min="1" max="168" step="1" placeholder="Ex: 40">
+								</div>
+								<div class="form-group" style="flex:1;">
+									<label for="localVagas">Vagas</label>
+									<input type="number" id="localVagas" min="1" max="100" step="1" placeholder="1" value="1">
+								</div>
+							</div>
+
+							<div class="form-group">
+								<label><i class='bx bxs-calendar-week' style="margin-right:4px;"></i> Dias da semana</label>
+								<div class="dias-semana-grid" id="localDiasSemana">
+									<label class="dia-check"><input type="checkbox" value="seg"> <span>Seg</span></label>
+									<label class="dia-check"><input type="checkbox" value="ter"> <span>Ter</span></label>
+									<label class="dia-check"><input type="checkbox" value="qua"> <span>Qua</span></label>
+									<label class="dia-check"><input type="checkbox" value="qui"> <span>Qui</span></label>
+									<label class="dia-check"><input type="checkbox" value="sex"> <span>Sex</span></label>
+									<label class="dia-check"><input type="checkbox" value="sab"> <span>Sáb</span></label>
+									<label class="dia-check"><input type="checkbox" value="dom"> <span>Dom</span></label>
+								</div>
+							</div>
+
+							<div class="form-row">
+								<div class="form-group" style="flex:1;">
+									<label for="localDataInicio"><i class='bx bxs-calendar-check' style="margin-right:4px;"></i> Início do período</label>
+									<input type="date" id="localDataInicio">
+								</div>
+								<div class="form-group" style="flex:1;">
+									<label for="localDataFim">Fim do período</label>
+									<input type="date" id="localDataFim">
+								</div>
+							</div>
+
+							<div class="form-actions">
+								<button type="button" class="btn-secondary" id="cancelarLocalModal">Cancelar</button>
+								<button type="submit" class="btn-primary"><i class='bx bxs-save' style="margin-right:4px;"></i> Salvar Local</button>
+							</div>
+						</form>
 					</div>
 				</div>
 
@@ -1131,22 +1245,82 @@
 							<li><a class="active" href="#">Agenda</a></li>
 						</ul>
 					</div>
-					<a href="#" class="btn-download abrir-cadastro-plantao">
-						<i class='bx bxs-calendar-plus bx-fade-down-hover' ></i>
-						<span class="text">Novo plantão</span>
-					</a>
 				</div>
 
-				<div class="plantoes-grid">
-					<div class="plantoes-card">
+				<!-- Summary Cards -->
+				<div class="contratos-summary-grid">
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon blue">
+							<i class='bx bxs-calendar'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="plantoesResumoTotal">0</strong>
+							<span>Total de plantões</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon green">
+							<i class='bx bxs-check-circle'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="plantoesResumoConcluidos">0</strong>
+							<span>Concluídos</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon yellow">
+							<i class='bx bxs-time-five'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="plantoesResumoHoje">0</strong>
+							<span>Hoje</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon grey">
+							<i class='bx bxs-calendar-event'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="plantoesResumoAgendados">0</strong>
+							<span>Agendados</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Alertas Panel -->
+				<div class="plantoes-alertas" id="plantoesAlertasPanel" style="display:none;">
+					<div class="plantoes-alertas-header">
+						<h3><i class='bx bxs-bell-ring'></i> Alertas</h3>
+						<button type="button" class="btn-text" id="toggleAlertasPanel"><i class='bx bx-chevron-down'></i></button>
+					</div>
+					<div class="plantoes-alertas-body" id="plantoesAlertasBody">
+						<!-- Alert cards rendered by JS -->
+					</div>
+				</div>
+
+				<!-- View Tabs -->
+				<div class="plantoes-view-tabs">
+					<button class="plantoes-view-tab active" data-plantoes-view="agenda">
+						<i class='bx bx-list-ul'></i> Agenda
+					</button>
+					<button class="plantoes-view-tab" data-plantoes-view="calendario">
+						<i class='bx bx-calendar'></i> Calendário
+					</button>
+				</div>
+
+				<!-- VIEW: Agenda (tabela) -->
+				<div class="plantoes-view-content active" data-plantoes-view-content="agenda">
+					<div class="contratos-card">
 						<div class="head">
 							<h3>Agenda de plantões</h3>
-							<div class="plantoes-actions">
-								<button class="btn-primary abrir-cadastro-plantao" type="button">Cadastrar plantão</button>
+							<div class="contratos-actions">
+								<button class="btn-primary abrir-cadastro-plantao" type="button">
+									<i class='bx bx-plus'></i> Novo plantão
+								</button>
 							</div>
 						</div>
 
-						<div class="plantoes-filters">
+						<div class="contratos-filters">
 							<div>
 								<label for="plantoesFilterStatus">Status</label>
 								<select id="plantoesFilterStatus">
@@ -1157,9 +1331,21 @@
 								</select>
 							</div>
 							<div>
+								<label for="plantoesFilterContrato">Contrato</label>
+								<select id="plantoesFilterContrato">
+									<option value="">Todos</option>
+								</select>
+							</div>
+							<div>
 								<label for="plantoesFilterEspecialidade">Especialidade</label>
 								<select id="plantoesFilterEspecialidade">
 									<option value="">Todas</option>
+								</select>
+							</div>
+							<div>
+								<label for="plantoesFilterMedico">Médico</label>
+								<select id="plantoesFilterMedico">
+									<option value="">Todos</option>
 								</select>
 							</div>
 							<div>
@@ -1168,45 +1354,97 @@
 							</div>
 						</div>
 
+						<!-- Bulk action bar (hidden when no selection) -->
+						<div id="plantoesBulkBar" class="plantoes-bulk-bar" style="display:none;">
+							<span><strong id="plantoesBulkCount">0</strong> selecionado(s)</span>
+							<button id="plantoesBulkConfirmar" class="btn btn-sm btn-success" title="Confirmar selecionados"><i class='bx bxs-check-circle'></i> Confirmar</button>
+							<button id="plantoesBulkDesconfirmar" class="btn btn-sm btn-warning" title="Desconfirmar selecionados"><i class='bx bxs-error-circle'></i> Desconfirmar</button>
+							<button id="plantoesBulkExcluir" class="btn btn-sm btn-danger" title="Excluir selecionados"><i class='bx bxs-trash'></i> Excluir</button>
+						</div>
+
 						<table class="plantoes-table">
 							<thead>
 								<tr>
+									<th style="width:36px;text-align:center;"><input type="checkbox" id="plantoesSelectAll" title="Selecionar todos"></th>
 									<th>Contrato</th>
 									<th>Data</th>
 									<th>Médico</th>
 									<th>Especialidade</th>
-									<th>Local</th>
+									<th>Carga Horária</th>
+									<th>Local de Atendimento</th>
+									<th>Item PNCP</th>
+									<th>Confirmação</th>
 									<th>Status</th>
 									<th>Ações</th>
 								</tr>
 							</thead>
 							<tbody id="plantoesTableBody">
 								<tr>
-									<td colspan="7">Carregando plantões...</td>
+									<td colspan="11">Carregando plantões...</td>
 								</tr>
 							</tbody>
 						</table>
 					</div>
+				</div>
 
-					<div class="plantoes-card">
+				<!-- VIEW: Calendário -->
+				<div class="plantoes-view-content" data-plantoes-view-content="calendario">
+					<div class="contratos-card">
 						<div class="head">
-							<h3>Resumo do período</h3>
-							<i class='bx bx-filter'></i>
+							<h3><i class='bx bx-calendar' style="margin-right:6px;"></i> Calendário de Necessidades</h3>
+							<div class="contratos-actions" style="gap:8px;display:flex;align-items:center;">
+								<select id="calendarioFilterContrato" style="min-width:180px;">
+									<option value="">Todos os contratos</option>
+								</select>
+								<div class="calendario-nav">
+									<button type="button" class="btn-icon" id="calendarioPrev"><i class='bx bx-chevron-left'></i></button>
+									<span id="calendarioMesAno" class="calendario-mes-label">Janeiro 2025</span>
+									<button type="button" class="btn-icon" id="calendarioNext"><i class='bx bx-chevron-right'></i></button>
+								</div>
+							</div>
 						</div>
-						<ul class="plantoes-summary">
-							<li>
-								<strong id="plantoesResumoConcluidos">0</strong>
-								<span>Plantões concluídos</span>
-							</li>
-							<li>
-								<strong id="plantoesResumoHoje">0</strong>
-								<span>Plantões hoje</span>
-							</li>
-							<li>
-								<strong id="plantoesResumoAgendados">0</strong>
-								<span>Plantões agendados</span>
-							</li>
-						</ul>
+
+						<!-- Legenda -->
+						<div class="calendario-legenda">
+							<span class="legenda-item"><span class="legenda-cor" style="background:#22c55e;"></span> Preenchido</span>
+							<span class="legenda-item"><span class="legenda-cor" style="background:#f97316;"></span> Parcial / Excesso</span>
+							<span class="legenda-item"><span class="legenda-cor" style="background:var(--dark-grey);opacity:.5;"></span> Pendente</span>
+							<span class="legenda-item"><span class="legenda-cor" style="background:var(--dark-grey);opacity:.3;"></span> Sem necessidade</span>
+						</div>
+
+						<!-- Necessidades por local -->
+						<div id="calendarioNecessidades" class="calendario-necessidades">
+							<p class="edital-tab-placeholder"><i class='bx bx-info-circle'></i> Configure a programação nos Locais de Atendimento (aba Contratos) para visualizar as necessidades.</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Modal: Atribuir Plantão rápido via calendário -->
+				<div class="modal" id="calQuickAssignModal" aria-hidden="true">
+					<div class="modal-content" style="max-width:480px;">
+						<div class="modal-header">
+							<h3><i class='bx bxs-calendar-plus' style="margin-right:6px;"></i> Atribuir Plantão</h3>
+							<button class="modal-close" type="button" id="calQuickAssignClose">&times;</button>
+						</div>
+						<div id="calQuickAssignInfo" style="margin-bottom:12px;"></div>
+						<form id="calQuickAssignForm" class="plantao-form">
+							<div class="form-group">
+								<label>Médico *</label>
+								<select id="calQuickMedico" required>
+									<option value="">Selecione o médico</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label>Carga horária (horas) *</label>
+								<input type="number" id="calQuickCarga" min="1" max="24" required>
+							</div>
+							<input type="hidden" id="calQuickContratoId">
+							<input type="hidden" id="calQuickLocalId">
+							<input type="hidden" id="calQuickData">
+							<button type="submit" class="btn-primary" style="margin-top:10px;width:100%;">Salvar plantão</button>
+						</form>
+						<!-- Plantões já agendados neste dia -->
+						<div id="calQuickAssignList" style="margin-top:14px;"></div>
 					</div>
 				</div>
 
@@ -1216,32 +1454,43 @@
 							<h3>Cadastro de plantão</h3>
 							<button class="modal-close" type="button" id="fecharCadastroPlantao">&times;</button>
 						</div>
-						<p>Registre plantões, médicos envolvidos e carga horária.</p>
+						<p>Registre plantões vinculados a contratos e locais de atendimento.</p>
 						<form id="plantaoForm" class="plantao-form">
 							<div class="form-row">
 								<div class="form-group">
-									<label>Contrato</label>
+									<label>Contrato *</label>
 									<select id="plantaoContrato" required>
-										<option value="">Selecione</option>
+										<option value="">Selecione o contrato</option>
 									</select>
 								</div>
 								<div class="form-group">
-									<label>Médico</label>
-									<select id="plantaoMedico" required>
-										<option value="">Selecione</option>
+									<label>Local de Atendimento</label>
+									<select id="plantaoLocalAtendimento">
+										<option value="">Selecione o contrato primeiro</option>
 									</select>
 								</div>
 							</div>
 							<div class="form-row">
 								<div class="form-group">
-									<label>Data</label>
+									<label>Médico *</label>
+									<select id="plantaoMedico" required>
+										<option value="">Selecione o médico</option>
+									</select>
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-group">
+									<label>Data *</label>
 									<input type="date" id="plantaoData" required>
 								</div>
 								<div class="form-group">
-									<label>Carga horária (h)</label>
+									<label>Carga horária (horas) *</label>
 									<input type="number" id="plantaoCargaHoraria" min="1" max="24" placeholder="Ex: 12" required>
 								</div>
 							</div>
+							<input type="hidden" id="plantaoUF" value="">
+							<input type="hidden" id="plantaoMunicipio" value="">
+							<input type="hidden" id="plantaoLocal" value="">
 							<button type="submit" class="btn-primary">Salvar plantão</button>
 						</form>
 					</div>
@@ -1255,13 +1504,216 @@
 						<ul class="breadcrumb">
 							<li><a href="#">Atendimentos</a></li>
 							<li><i class='bx bx-chevron-right' ></i></li>
-							<li><a class="active" href="#">Indicadores</a></li>
+							<li><a class="active" href="#">Produtividade</a></li>
 						</ul>
 					</div>
 				</div>
-				<div class="empty-state">
-					<i class='bx bxs-heart-circle'></i>
-					<p>Em breve, a tela de atendimentos detalhada.</p>
+
+				<!-- Summary Cards -->
+				<div class="contratos-summary-grid">
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon blue">
+							<i class='bx bxs-heart-circle'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="atendResumoTotal">0</strong>
+							<span>Total de atendimentos</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon green">
+							<i class='bx bxs-check-circle'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="atendResumoConcluidos">0</strong>
+							<span>Concluídos</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon yellow">
+							<i class='bx bxs-group'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="atendResumoPacientes">0</strong>
+							<span>Pacientes atendidos</span>
+						</div>
+					</div>
+					<div class="contratos-summary-card">
+						<div class="contratos-summary-icon grey">
+							<i class='bx bxs-time-five'></i>
+						</div>
+						<div class="contratos-summary-info">
+							<strong id="atendResumoHoras">0h</strong>
+							<span>Horas trabalhadas</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Table Card -->
+				<div class="contratos-card">
+					<div class="head">
+						<h3><i class='bx bxs-notepad' style="margin-right:6px;"></i> Registro de Atendimentos</h3>
+						<div class="contratos-actions">
+							<button class="btn-primary" type="button" id="novoAtendimentoBtn">
+								<i class='bx bx-plus'></i> Novo atendimento
+							</button>
+						</div>
+					</div>
+
+					<div class="contratos-filters">
+						<div>
+							<label for="atendFilterStatus">Status</label>
+							<select id="atendFilterStatus">
+								<option value="">Todos</option>
+								<option value="pendente">Pendente</option>
+								<option value="em_andamento">Em andamento</option>
+								<option value="concluido">Concluído</option>
+								<option value="cancelado">Cancelado</option>
+							</select>
+						</div>
+						<div>
+							<label for="atendFilterContrato">Contrato</label>
+							<select id="atendFilterContrato">
+								<option value="">Todos</option>
+							</select>
+						</div>
+						<div>
+							<label for="atendFilterMedico">Médico</label>
+							<select id="atendFilterMedico">
+								<option value="">Todos</option>
+							</select>
+						</div>
+						<div>
+							<label for="atendFilterPeriodo">Período</label>
+							<input id="atendFilterPeriodo" type="text" placeholder="Ex: 10/03 - 20/03">
+						</div>
+					</div>
+
+					<table class="plantoes-table">
+						<thead>
+							<tr>
+								<th>Data</th>
+								<th>Médico</th>
+								<th>Contrato</th>
+								<th>Local</th>
+								<th>Horário</th>
+								<th>Carga Realiz.</th>
+								<th>Pacientes</th>
+								<th>Status</th>
+								<th>Ações</th>
+							</tr>
+						</thead>
+						<tbody id="atendimentosTableBody">
+							<tr>
+								<td colspan="9">Carregando atendimentos...</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<!-- Modal: Novo/Editar Atendimento -->
+				<div class="modal" id="atendimentoModal" aria-hidden="true">
+					<div class="modal-content" style="max-width:680px;">
+						<div class="modal-header">
+							<div>
+								<h3><i class='bx bxs-heart-circle' style="margin-right:6px;color:var(--blue);"></i> Registro de Atendimento</h3>
+								<p class="modal-subtitle">Registre a execução do plantão e dados de produtividade.</p>
+							</div>
+							<button class="modal-close" type="button" id="fecharAtendimentoModal">&times;</button>
+						</div>
+						<form id="atendimentoForm" class="atend-form">
+							<!-- Vínculo -->
+							<fieldset class="atend-fieldset">
+								<legend><i class='bx bx-link'></i> Vínculo</legend>
+								<div class="form-row">
+									<div class="form-group">
+										<label for="atendPlantaoId">Plantão vinculado</label>
+										<select id="atendPlantaoId">
+											<option value="">Sem vínculo (avulso)</option>
+										</select>
+									</div>
+								</div>
+								<div class="form-row">
+									<div class="form-group">
+										<label for="atendContratoId">Contrato <span class="required">*</span></label>
+										<select id="atendContratoId" required>
+											<option value="">Selecione</option>
+										</select>
+									</div>
+									<div class="form-group">
+										<label for="atendLocalId">Local de Atendimento</label>
+										<select id="atendLocalId">
+											<option value="">Selecione o contrato primeiro</option>
+										</select>
+									</div>
+								</div>
+							</fieldset>
+
+							<!-- Execução -->
+							<fieldset class="atend-fieldset">
+								<legend><i class='bx bx-calendar-check'></i> Execução</legend>
+								<div class="form-row">
+									<div class="form-group">
+										<label for="atendMedicoId">Médico <span class="required">*</span></label>
+										<select id="atendMedicoId" required>
+											<option value="">Selecione</option>
+										</select>
+									</div>
+									<div class="form-group">
+										<label for="atendData">Data <span class="required">*</span></label>
+										<input type="date" id="atendData" required>
+									</div>
+								</div>
+								<div class="form-row cols-3">
+									<div class="form-group">
+										<label for="atendHoraInicio">Hora início</label>
+										<input type="time" id="atendHoraInicio">
+									</div>
+									<div class="form-group">
+										<label for="atendHoraFim">Hora fim</label>
+										<input type="time" id="atendHoraFim">
+									</div>
+									<div class="form-group">
+										<label for="atendCargaRealizada">Carga realizada (h)</label>
+										<input type="text" id="atendCargaRealizada" readonly tabindex="-1" placeholder="-" style="background:transparent;cursor:default;font-weight:600;color:var(--blue);">
+									</div>
+								</div>
+							</fieldset>
+
+							<!-- Produtividade -->
+							<fieldset class="atend-fieldset">
+								<legend><i class='bx bx-bar-chart-alt-2'></i> Produtividade</legend>
+								<div class="form-row">
+									<div class="form-group">
+										<label for="atendPacientes">Pacientes atendidos</label>
+										<input type="number" id="atendPacientes" min="0" placeholder="0">
+									</div>
+									<div class="form-group">
+										<label for="atendStatus">Status</label>
+										<select id="atendStatus">
+											<option value="pendente">Pendente</option>
+											<option value="em_andamento">Em andamento</option>
+											<option value="concluido">Concluído</option>
+											<option value="cancelado">Cancelado</option>
+										</select>
+									</div>
+								</div>
+								<div class="form-group">
+									<label for="atendProcedimentos">Procedimentos / Descrição</label>
+									<textarea id="atendProcedimentos" rows="2" placeholder="Descreva procedimentos realizados..."></textarea>
+								</div>
+								<div class="form-group">
+									<label for="atendObservacoes">Observações</label>
+									<textarea id="atendObservacoes" rows="2" placeholder="Observações adicionais..."></textarea>
+								</div>
+							</fieldset>
+
+							<div class="atend-form-footer">
+								<button type="button" class="btn-secondary" onclick="document.getElementById('fecharAtendimentoModal').click()">Cancelar</button>
+								<button type="submit" class="btn-primary"><i class='bx bxs-save'></i> Salvar Atendimento</button>
+							</div>
+						</form>
+					</div>
 				</div>
 			</section>
 
@@ -1391,9 +1843,7 @@
 							<div class="form-group" style="flex:1;">
 								<label>Id contratação PNCP</label>
 								<input type="text" id="pncpIdContratacao" placeholder="Ex: 00000000000000-0-000000/0000">
-							</div>
-							<div class="form-group" style="flex:0 0 auto;">
-								<span style="font-size:12px;color:var(--dark-grey);font-style:italic;">Preencha o Id para busca direta (ignora os demais filtros)</span>
+								<span style="font-size:12px;color:var(--dark-grey);font-style:italic;margin-top:4px;display:block;">Preencha o Id para busca direta (ignora os demais filtros)</span>
 							</div>
 						</div>
 						<div class="pncp-filter-actions">

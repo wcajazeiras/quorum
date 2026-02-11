@@ -14,9 +14,6 @@ router.post('/', medicosController.criar);
 // GET /api/medicos/:id - Buscar por ID
 router.get('/:id', medicosController.buscarPorId);
 
-// PUT /api/medicos/:id - Atualizar
-router.put('/:id', medicosController.atualizar);
-
 // DELETE /api/medicos/:id - Deletar
 router.delete('/:id', medicosController.deletar);
 

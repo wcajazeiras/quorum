@@ -5,12 +5,12 @@ const db = require('../config/database');
 
 class Plantao {
   // Criar novo plantão
-  static criar(medicoId, data, cargaHoraria, contratoId) {
+  static criar(medicoId, data, cargaHoraria) {
     return new Promise((resolve, reject) => {
-      const sql = 'INSERT INTO plantoes (medicoId, data, cargaHoraria, contratoId) VALUES (?, ?, ?, ?)';
-      db.run(sql, [medicoId, data, cargaHoraria, contratoId || null], function(err) {
+      const sql = 'INSERT INTO plantoes (medicoId, data, cargaHoraria) VALUES (?, ?, ?)';
+      db.run(sql, [medicoId, data, cargaHoraria], function(err) {
         if (err) reject(err);
-        else resolve({ id: this.lastID, medicoId, data, cargaHoraria, contratoId });
+        else resolve({ id: this.lastID, medicoId, data, cargaHoraria });
       });
     });
   }
@@ -19,14 +19,9 @@ class Plantao {
   static listar() {
     return new Promise((resolve, reject) => {
       const sql = `
-        SELECT plantoes.*,
-               medicos.nome, medicos.especialidade, medicos.municipio, medicos.uf,
-               contratos.numero AS contratoNumero,
-               editais.orgao AS contratoOrgao
+        SELECT plantoes.*, medicos.nome, medicos.especialidade, medicos.municipio, medicos.uf
         FROM plantoes
         LEFT JOIN medicos ON plantoes.medicoId = medicos.id
-        LEFT JOIN contratos ON plantoes.contratoId = contratos.id
-        LEFT JOIN editais ON contratos.editalId = editais.id
         ORDER BY plantoes.data DESC
       `;
       db.all(sql, [], (err, rows) => {
@@ -40,12 +35,9 @@ class Plantao {
   static buscarPorMedico(medicoId) {
     return new Promise((resolve, reject) => {
       const sql = `
-        SELECT plantoes.*,
-               medicos.nome, medicos.especialidade, medicos.municipio, medicos.uf,
-               contratos.numero AS contratoNumero
+        SELECT plantoes.*, medicos.nome, medicos.especialidade, medicos.municipio, medicos.uf
         FROM plantoes
         LEFT JOIN medicos ON plantoes.medicoId = medicos.id
-        LEFT JOIN contratos ON plantoes.contratoId = contratos.id
         WHERE plantoes.medicoId = ?
         ORDER BY plantoes.data DESC
       `;
@@ -57,16 +49,16 @@ class Plantao {
   }
 
   // Atualizar plantão
-  static atualizar(id, medicoId, data, cargaHoraria, contratoId) {
+  static atualizar(id, medicoId, data, cargaHoraria) {
     return new Promise((resolve, reject) => {
       const sql = `
         UPDATE plantoes
-        SET medicoId = ?, data = ?, cargaHoraria = ?, contratoId = ?
+        SET medicoId = ?, data = ?, cargaHoraria = ?
         WHERE id = ?
       `;
-      db.run(sql, [medicoId, data, cargaHoraria, contratoId || null, id], function(err) {
+      db.run(sql, [medicoId, data, cargaHoraria, id], function(err) {
         if (err) reject(err);
-        else resolve({ id, medicoId, data, cargaHoraria, contratoId });
+        else resolve({ id, medicoId, data, cargaHoraria });
       });
     });
   }
