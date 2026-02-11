@@ -1903,13 +1903,16 @@ function buildMedicoRow(medico) {
         : `<span class="medico-avatar medico-avatar-placeholder"><i class='bx bxs-user'></i></span>`;
 
     row.innerHTML = `
-        <td><div class="medico-nome-cell">${avatarHtml}<span>${medico.nome || ''}</span></div></td>
+        <td><div class="medico-nome-cell">${avatarHtml}<a href="#" class="medico-nome-link" data-medico-id="${medico.id}">${medico.nome || ''}</a></div></td>
         <td>${medico.especialidade || ''}</td>
         <td>${medico.crm || 'Não informado'}</td>
         <td>${formatMedicoLocal(medico)}</td>
         <td>${statusLabel}</td>
         <td>
             <div class="actions">
+                <button class="btn-icon" data-action="view" data-id="${medico.id}" title="Visualizar">
+                    <i class='bx bxs-show'></i>
+                </button>
                 <button class="btn-icon" data-action="edit" data-id="${medico.id}" title="Editar">
                     <i class='bx bxs-edit'></i>
                 </button>
@@ -2078,6 +2081,14 @@ if (medicoForm) {
             closeMedicoModal();
 
             await loadMedicos();
+
+            // Refresh detail page if open
+            if (medicoDetalheAtual && savedId) {
+                const updated = medicosCache.find(m => String(m.id) === String(savedId));
+                if (updated) {
+                    openMedicoDetalhePage(updated);
+                }
+            }
         } catch (error) {
             console.error(error);
         }
@@ -2121,11 +2132,26 @@ if (medicosFilterStatus) {
 
 if (medicosTableBody) {
     medicosTableBody.addEventListener('click', async (event) => {
+        // Handle name link click
+        const nameLink = event.target.closest('.medico-nome-link');
+        if (nameLink) {
+            event.preventDefault();
+            const medicoId = nameLink.dataset.medicoId;
+            const medico = medicosCache.find(item => String(item.id) === String(medicoId));
+            if (medico) openMedicoDetalhePage(medico);
+            return;
+        }
+
         const button = event.target.closest('button[data-action]');
         if (!button) return;
 
         const action = button.dataset.action;
         const medicoId = button.dataset.id;
+        if (action === 'view' && medicoId) {
+            const medico = medicosCache.find(item => String(item.id) === String(medicoId));
+            if (medico) openMedicoDetalhePage(medico);
+            return;
+        }
         if (action === 'edit' && medicoId) {
             const medico = medicosCache.find(item => String(item.id) === String(medicoId));
             if (medico) {
@@ -2149,6 +2175,189 @@ if (medicosTableBody) {
         }
     });
 }
+
+// ── Médico Detalhe Page ──
+let medicoDetalheAtual = null;
+
+function openMedicoDetalhePage(medico) {
+    medicoDetalheAtual = medico;
+
+    // Title & breadcrumb
+    const titleEl = document.getElementById('medicoDetalheTitle');
+    const breadcrumbEl = document.getElementById('medicoDetalheBreadcrumb');
+    if (titleEl) titleEl.textContent = medico.nome || `Médico #${medico.id}`;
+    if (breadcrumbEl) breadcrumbEl.textContent = medico.nome || 'Detalhes';
+
+    // Summary cards
+    const especCard = document.getElementById('medicoDetalheEspecialidade');
+    const crmCard = document.getElementById('medicoDetalheCrm');
+    const localCard = document.getElementById('medicoDetalheLocal');
+    const statusCard = document.getElementById('medicoDetalheStatusCard');
+
+    if (especCard) especCard.textContent = medico.especialidade || '-';
+    if (crmCard) crmCard.textContent = medico.crm || '-';
+    if (localCard) localCard.textContent = formatMedicoLocal(medico);
+    if (statusCard) {
+        const st = (medico.status || 'ativo').toLowerCase();
+        const css = st === 'ativo' ? 'completed' : 'pending';
+        statusCard.innerHTML = `<span class="status ${css}" style="font-size:13px;">${st.charAt(0).toUpperCase() + st.slice(1)}</span>`;
+    }
+
+    // Render view
+    renderMedicoDetalheView(medico);
+
+    // Reset to dados tab
+    switchMedicoDetalheTab('dados');
+
+    // Navigate
+    setActivePage('medico-detalhe');
+
+    // Load plantões
+    loadMedicoPlantoes(medico.id);
+}
+
+function renderMedicoDetalheView(medico) {
+    const body = document.getElementById('medicoDetalheConteudo');
+    if (!body) return;
+
+    const st = (medico.status || 'ativo').toLowerCase();
+    const statusCss = st === 'ativo' ? 'completed' : 'pending';
+    const statusLabel = st.charAt(0).toUpperCase() + st.slice(1);
+
+    const avatarHtml = medico.foto
+        ? `<img src="${medico.foto}" class="medico-detalhe-avatar" alt="${medico.nome}">`
+        : `<span class="medico-detalhe-avatar-placeholder"><i class='bx bxs-user'></i></span>`;
+
+    body.innerHTML = `
+        <div class="medico-detalhe-header">
+            ${avatarHtml}
+            <div class="medico-detalhe-header-info">
+                <h2>${medico.nome || '-'}</h2>
+                <span>${medico.especialidade || 'Especialidade não informada'} ${medico.crm ? '&bull; ' + medico.crm : ''}</span>
+            </div>
+        </div>
+        <div class="edital-view-grid" style="margin-top:20px;">
+            <div class="edital-view-item">
+                <span class="edital-view-label">Nome completo</span>
+                <span class="edital-view-value">${medico.nome || '-'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Especialidade</span>
+                <span class="edital-view-value">${medico.especialidade || '-'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">CRM</span>
+                <span class="edital-view-value">${medico.crm || 'Não informado'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Telefone</span>
+                <span class="edital-view-value">${medico.telefone || 'Não informado'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Email</span>
+                <span class="edital-view-value">${medico.email || 'Não informado'}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">UF / Cidade</span>
+                <span class="edital-view-value">${formatMedicoLocal(medico)}</span>
+            </div>
+            <div class="edital-view-item">
+                <span class="edital-view-label">Status</span>
+                <span class="edital-view-value"><span class="status ${statusCss}">${statusLabel}</span></span>
+            </div>
+        </div>
+    `;
+}
+
+function switchMedicoDetalheTab(tabName) {
+    document.querySelectorAll('#medicoDetalheTabs .edital-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.medicoTab === tabName);
+    });
+    document.querySelectorAll('.medico-tab-content').forEach(content => {
+        content.classList.toggle('active', content.dataset.medicoTabContent === tabName);
+    });
+}
+
+async function loadMedicoPlantoes(medicoId) {
+    const body = document.getElementById('medicoDetalhePlantoesBody');
+    if (!body) return;
+    body.innerHTML = '<p class="edital-tab-placeholder"><i class="bx bx-loader-alt bx-spin"></i> Carregando plantões...</p>';
+
+    try {
+        const response = await fetch(`/api/plantoes/medico/${medicoId}`);
+        if (!response.ok) throw new Error('Falha ao carregar plantões');
+        const plantoes = await response.json();
+
+        if (!plantoes || plantoes.length === 0) {
+            body.innerHTML = '<p style="color:var(--dark-grey);text-align:center;padding:24px 0;">Nenhum plantão registrado para este médico.</p>';
+            return;
+        }
+
+        let html = `<table class="plantoes-table">
+            <thead>
+                <tr>
+                    <th>Contrato</th>
+                    <th>Data</th>
+                    <th>Carga Horária</th>
+                    <th>Local</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        plantoes.forEach(p => {
+            const statusMeta = getPlantaoStatus(p.data);
+            const contratoLabel = p.contratoNumero ? `#${p.contratoNumero}` : 'Não vinculado';
+            const local = formatPlantaoLocal(p);
+            html += `
+                <tr>
+                    <td>${contratoLabel}</td>
+                    <td>${formatDate(p.data)}</td>
+                    <td>${p.cargaHoraria || '-'}h</td>
+                    <td>${local}</td>
+                    <td><span class="status ${statusMeta.css}">${statusMeta.label}</span></td>
+                </tr>`;
+        });
+
+        html += `</tbody></table>`;
+        body.innerHTML = html;
+    } catch (error) {
+        body.innerHTML = '<p style="color:#c0392b;text-align:center;padding:24px 0;">Erro ao carregar plantões.</p>';
+        console.error(error);
+    }
+}
+
+// Tab click handlers
+document.querySelectorAll('#medicoDetalheTabs .edital-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.medicoTab;
+        if (tab) switchMedicoDetalheTab(tab);
+    });
+});
+
+// Editar button
+const medicoDetalheEditarBtn = document.getElementById('medicoDetalheEditarBtn');
+if (medicoDetalheEditarBtn) {
+    medicoDetalheEditarBtn.addEventListener('click', () => {
+        if (medicoDetalheAtual) openMedicoModal(medicoDetalheAtual);
+    });
+}
+
+// Voltar button
+const medicoDetalheVoltarBtn = document.getElementById('medicoDetalheVoltarBtn');
+if (medicoDetalheVoltarBtn) {
+    medicoDetalheVoltarBtn.addEventListener('click', () => {
+        setActivePage('medicos');
+    });
+}
+
+// Breadcrumb click on Médicos link
+document.querySelectorAll('[data-page="medico-detalhe"] .breadcrumb a[data-page="medicos"]').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActivePage('medicos');
+    });
+});
 
 // ========== PLANTOES (GESTAO) ==========
 const plantoesTableBody = document.getElementById('plantoesTableBody');

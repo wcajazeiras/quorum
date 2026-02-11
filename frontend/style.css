@@ -633,10 +633,26 @@ body:not(.dark) #content nav .swith-lm .bxs-moon {
 }
 
 #content main .table-data .order table th {
-	padding-bottom: 12px;
-	font-size: 13px;
+	padding: 10px 8px;
+	font-size: 12px;
 	text-align: left;
-	border-bottom: 1px solid var(--grey);
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	color: var(--dark-grey);
+	border-bottom: 2px solid rgba(0,0,0,0.06);
+}
+
+#content main .table-data .order table thead {
+	background: #f0f4f8;
+}
+
+body.dark #content main .table-data .order table thead {
+	background: #0f1525;
+}
+
+body.dark #content main .table-data .order table thead th {
+	color: #9ab0c8;
+	border-bottom-color: rgba(255,255,255,0.06);
 }
 
 #content main .table-data .order table td {
@@ -1220,12 +1236,15 @@ body.dark .edital-tab.active {
 	font-size: 13px;
 }
 
+.pncp-itens-table thead {
+	background: #f0f4f8;
+}
+
 .pncp-itens-table thead th {
-	background: var(--grey);
 	padding: 10px 12px;
 	text-align: left;
 	font-weight: 600;
-	font-size: 11px;
+	font-size: 12px;
 	text-transform: uppercase;
 	letter-spacing: 0.3px;
 	color: var(--dark-grey);
@@ -1233,8 +1252,11 @@ body.dark .edital-tab.active {
 	white-space: nowrap;
 }
 
-body.dark .pncp-itens-table thead th {
+body.dark .pncp-itens-table thead {
 	background: #0f1525;
+}
+
+body.dark .pncp-itens-table thead th {
 	color: #9ab0c8;
 	border-bottom-color: rgba(255,255,255,0.06);
 }
@@ -1863,13 +1885,27 @@ body.dark .pncp-tag-medico {
 	border-collapse: collapse;
 }
 
+#content main .contratos-table thead {
+	background: #f0f4f8;
+}
+
 #content main .contratos-table thead th {
 	text-align: left;
-	padding: 12px 14px;
+	padding: 10px 14px;
 	font-size: 12px;
 	text-transform: uppercase;
+	letter-spacing: 0.3px;
 	color: var(--dark-grey);
-	border-bottom: 2px solid var(--table-border);
+	border-bottom: 2px solid rgba(0,0,0,0.06);
+}
+
+body.dark .contratos-table thead {
+	background: #0f1525;
+}
+
+body.dark .contratos-table thead th {
+	color: #9ab0c8;
+	border-bottom-color: rgba(255,255,255,0.06);
 }
 
 #content main .contratos-table tbody td {
@@ -2187,12 +2223,27 @@ body.dark .contrato-edital-link:hover {
 	border-collapse: collapse;
 }
 
+#content main .relatorios-table thead {
+	background: #f0f4f8;
+}
+
 #content main .relatorios-table th {
-	padding-bottom: 12px;
-	font-size: 13px;
+	padding: 10px 8px;
+	font-size: 12px;
 	text-align: left;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
 	color: var(--dark-grey);
-	border-bottom: 1px solid var(--table-border);
+	border-bottom: 2px solid rgba(0,0,0,0.06);
+}
+
+body.dark .relatorios-table thead {
+	background: #0f1525;
+}
+
+body.dark .relatorios-table thead th {
+	color: #9ab0c8;
+	border-bottom-color: rgba(255,255,255,0.06);
 }
 
 #content main .relatorios-table td {
@@ -2270,12 +2321,27 @@ body.dark .contrato-edital-link:hover {
 	border-collapse: collapse;
 }
 
+#content main .plantoes-table thead {
+	background: #f0f4f8;
+}
+
 #content main .plantoes-table th {
-	padding-bottom: 12px;
-	font-size: 13px;
+	padding: 10px 8px;
+	font-size: 12px;
 	text-align: left;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
 	color: var(--dark-grey);
-	border-bottom: 1px solid var(--table-border);
+	border-bottom: 2px solid rgba(0,0,0,0.06);
+}
+
+body.dark .plantoes-table thead {
+	background: #0f1525;
+}
+
+body.dark .plantoes-table thead th {
+	color: #9ab0c8;
+	border-bottom-color: rgba(255,255,255,0.06);
 }
 
 #content main .plantoes-table td {
@@ -2400,6 +2466,77 @@ body.dark .contrato-edital-link:hover {
 	gap: 10px;
 }
 
+.medico-nome-link {
+	color: var(--blue);
+	font-weight: 600;
+	cursor: pointer;
+	text-decoration: none;
+	transition: opacity 0.15s;
+}
+
+.medico-nome-link:hover {
+	opacity: 0.75;
+	text-decoration: underline;
+}
+
+/* ====== Médico Detalhe Page ====== */
+.medico-tab-content {
+	display: none;
+}
+
+.medico-tab-content.active {
+	display: block;
+}
+
+.medico-detalhe-header {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	margin-bottom: 8px;
+}
+
+.medico-detalhe-avatar {
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	object-fit: cover;
+	border: 3px solid var(--blue);
+	flex-shrink: 0;
+}
+
+.medico-detalhe-avatar-placeholder {
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	background: var(--grey);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 32px;
+	color: var(--dark-grey);
+	border: 3px solid var(--blue);
+	flex-shrink: 0;
+}
+
+body.dark .medico-detalhe-avatar-placeholder {
+	background: #1a2235;
+}
+
+.medico-detalhe-header-info h2 {
+	font-size: 22px;
+	color: var(--dark);
+	margin: 0 0 4px;
+}
+
+body.dark .medico-detalhe-header-info h2 {
+	color: #e0e6ed;
+}
+
+.medico-detalhe-header-info span {
+	font-size: 13px;
+	color: var(--dark-grey);
+}
+
 #content main .medico-form,
 #content main .plantao-form {
 	margin-top: 16px;
@@ -2450,32 +2587,30 @@ body.dark .contrato-edital-link:hover {
 	border-collapse: collapse;
 }
 
-#content main .medicos-table th {
-	padding: 0 8px 12px 8px;
-	font-size: 13px;
-	text-align: left;
-	color: var(--dark-grey);
-	border-bottom: 1px solid var(--table-border);
-}
-
-#pncpTable thead {
+#content main .medicos-table thead {
 	background: #f0f4f8;
 }
 
-#pncpTable thead th {
-	padding: 10px 8px !important;
+#content main .medicos-table th {
+	padding: 10px 8px;
 	font-size: 12px;
+	text-align: left;
 	text-transform: uppercase;
 	letter-spacing: 0.3px;
+	color: var(--dark-grey);
+	border-bottom: 2px solid rgba(0,0,0,0.06);
 }
 
-body.dark #pncpTable thead {
+body.dark .medicos-table thead {
 	background: #0f1525;
 }
 
-body.dark #pncpTable thead th {
+body.dark .medicos-table thead th {
 	color: #9ab0c8;
+	border-bottom-color: rgba(255,255,255,0.06);
 }
+
+
 
 #content main .medicos-table td {
 	padding: 12px 8px;
